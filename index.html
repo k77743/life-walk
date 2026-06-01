@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生活漫步 Life Walk — 每周生活提案與溫馨日誌</title>
+    <!-- 載入 Tailwind CSS 與 FontAwesome 圖示 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f4f6f0; color: #2c3e29; }
+        .linen-bg { background-color: #fdfbf7; }
+        .forest-green { color: #2c5e3b; }
+        .forest-bg { background-color: #2c5e3b; }
+        .forest-bg-light { background-color: #eef3eb; }
+        .accent-gold { color: #d4af37; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- 載入 React 核心與 Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 填入我們前面修改完畢的完整 React 程式邏輯 -->
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // 預設生活類別範例
+        const DEFAULT_CATEGORIES = [
+            { id: 'cat-1', name: '個人創作', color: '#8ebf9d', icon: 'fa-palette' },
+            { id: 'cat-2', name: '身體動能', color: '#e8a382', icon: 'fa-running' },
+            { id: 'cat-3', name: '閱讀養分', color: '#8fa8cd', icon: 'fa-book-open' },
+            { id: 'cat-4', name: '心靈綠洲', color: '#bca3cd', icon: 'fa-leaf' },
+            { id: 'cat-5', name: '生活微光', color: '#eed180', icon: 'fa-wand-magic-sparkles' }
+        ];
+
+        // 隨機心靈引言
+        const QUOTES = [
+            "慢下來，靈感就在與自己對話的空隙中萌芽。",
+            "每一次的閱讀與創作，都是在灌溉內心的秘密花園。",
+            "汗水是身體對生活熱情的最佳回應。",
+            "在日子的夾縫中捕捉微光，生活便有了詩意。"
+        ];
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('journal'); // journal, stats, settings
+            const [statsPeriod, setStatsPeriod] = useState('week'); // week, month
+            const [selectedDate, setSelectedDate] = useState('2026-06-01');
+            const [quote, setQuote] = useState(QUOTES[0]);
+
+            // 本地資料庫狀態
+            const [categories, setCategories] = useState(() => {
+                const saved = localStorage.getItem('lw_categories');
+                return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+            });
+
+            const [journalData, setJournalData] = useState(() => {
+                const saved = localStorage.getItem('lw_journal_data');
+                if (saved) return JSON.parse(saved);
+                
+                // 預設體驗示範資料（包含 2026 年 6 月初的數據）
+                return {
+                    '2026-06-01': {
+                        todos: [
+                            { id: 't1', text: '繪製 2D 戰鬥場景草稿', completed: true, category: 'cat-1' },
+                            { id: 't2', text: '核心肌群訓練 30 分鐘', completed: false, category: 'cat-2' },
+                            { id: 't3', text: '閱讀美學雜誌 2 章節', completed: true, category: 'cat-3' }
+                        ],
+                        habits: { 'h-1': true, 'h-2': true, 'h-3': false },
+                        mood: '😊',
+                        note: '今天創作手感很好，傍晚散步時吹來的微風很舒服。'
+                    },
+                    '2026-06-02': {
+                        todos: [
+                            { id: 't4', text: 'Blender 骨架工具操作練習', completed: false, category: 'cat-1' },
+                            { id: 't5', text: '睡前靜心冥想 10 分鐘', completed: true, category: 'cat-4' }
+                        ],
+                        habits: { 'h-1': true, 'h-2': false, 'h-3': true },
+                        mood: '😌',
+                        note: '今天嘗試了新的放鬆冥想，心情特別平靜。'
+                    }
+                };
+            });
+
+            const [habits, setHabits] = useState(() => {
+                const saved = localStorage.getItem('lw_habits');
+                return saved ? JSON.parse(saved) : [
+                    { id: 'h-1', name: '每日創作/靈感記錄', icon: 'fa-pen-fancy' },
+                    { id: 'h-2', name: '飲水 2000cc', icon: 'fa-droplet' },
+                    { id: 'h-3', name: '閱讀 15 分鐘', icon: 'fa-book' }
+                ];
+            });
+
+            // Firebase 雲端金鑰狀態
+            const [fbConfig, setFbConfig] = useState(() => {
+                const saved = localStorage.getItem('lw_fb_config');
+                return saved ? JSON.parse(saved) : { apiKey: '', projectId: '', appId: '', autoSync: false };
+            });
+
+            const [syncStatus, setSyncStatus] = useState('');
+
+            // 當資料變更時，自動儲存至瀏覽器 LocalStorage
+            useEffect(() => {
+                localStorage.setItem('lw_categories', JSON.stringify(categories));
+            }, [categories]);
+
+            useEffect(() => {
+                localStorage.setItem('lw_journal_data', JSON.stringify(journalData));
+                if (fbConfig.autoSync) handleCloudUpload();
+            }, [journalData]);
+
+            useEffect(() => {
+                localStorage.setItem('lw_habits', JSON.stringify(habits));
+            }, [habits]);
+
+            useEffect(() => {
+                localStorage.setItem('lw_fb_config', JSON.stringify(fbConfig));
+            }, [fbConfig]);
+
+            // 更換日期時隨機變更引言
+            useEffect(() => {
+                const randIndex = Math.floor(Math.random() * QUOTES.length);
+                setQuote(QUOTES[randIndex]);
+            }, [selectedDate]);
+
+            // 產生一週的時間軸資訊
+            const weekDays = useMemo(() => {
+                const days = [];
+                const current = new Date('2026-06-01'); // 基準週固定從週一開始
+                for (let i = 0; i < 7; i++) {
+                    const dateStr = current.toISOString().split('T')[0];
+                    const dayLabels = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+                    days.push({
+                        date: dateStr,
+                        dayName: dayLabels[current.getDay()],
+                        dayNum: current.getDate()
+                    });
+                    current.setDate(current.getDate() + 1);
+                }
+                return days;
+            }, []);
+
+            // 取得當日數據
+            const currentDayData = journalData[selectedDate] || { todos: [], habits: {}, mood: '⚪', note: '' };
+
+            // 處理 To-Do
+            const addTodo = (text, categoryId) => {
+                if (!text.trim()) return;
+                const newTodo = { id: 'todo-' + Date.now(), text, completed: false, category: categoryId };
+                setJournalData(prev => ({
+                    ...prev,
+                    [selectedDate]: {
+                        ...currentDayData,
+                        todos: [...currentDayData.todos, newTodo]
+                    }
+                }));
+            };
+
+            const toggleTodo = (todoId) => {
+                const updatedTodos = currentDayData.todos.map(t => t.id === todoId ? { ...t, completed: !t.completed } : t);
+                setJournalData(prev => ({
+                    ...prev,
+                    [selectedDate]: { ...currentDayData, todos: updatedTodos }
+                }));
+            };
+
+            const deleteTodo = (todoId) => {
+                const updatedTodos = currentDayData.todos.filter(t => t.id !== todoId);
+                setJournalData(prev => ({
+                    ...prev,
+                    [selectedDate]: { ...currentDayData, todos: updatedTodos }
+                }));
+            };
+
+            // 處理習慣勾選
+            const toggleHabit = (habitId) => {
+                const currentHabits = { ...currentDayData.habits };
+                currentHabits[habitId] = !currentHabits[habitId];
+                setJournalData(prev => ({
+                    ...prev,
+                    [selectedDate]: { ...currentDayData, habits: currentHabits }
+                }));
+            };
+
+            // 處理心情與日記
+            const updateMood = (mood) => {
+                setJournalData(prev => ({
+                    ...prev,
+                    [selectedDate]: { ...currentDayData, mood }
+                }));
+            };
+
+            const updateNote = (note) => {
+                setJournalData(prev => ({
+                    ...prev,
+                    [selectedDate]: { ...currentDayData, note }
+                }));
+            };
+
+            // 統計計算邏輯
+            const statsMetrics = useMemo(() => {
+                const targetDates = statsPeriod === 'week' 
+                    ? weekDays.map(d => d.date)
+                    : Object.keys(journalData).filter(d => d.startsWith('2026-06')); // 示範：全六月
+
+                let totalTodos = 0, completedTodos = 0;
+                let habitCheckCount = 0, habitTotalPossible = targetDates.length * habits.length;
+                const moodCounts = {};
+                const catCounts = {};
+
+                targetDates.forEach(date => {
+                    const data = journalData[date];
+                    if (data) {
+                        if (data.todos) {
+                            data.todos.forEach(t => {
+                                totalTodos++;
+                                if (t.completed) {
+                                    completedTodos++;
+                                    catCounts[t.category] = (catCounts[t.category] || 0) + 1;
+                                }
+                            });
+                        }
+                        if (data.habits) {
+                            Object.values(data.habits).forEach(val => { if (val) habitCheckCount++; });
+                        }
+                        if (data.mood && data.mood !== '⚪') {
+                            moodCounts[data.mood] = (moodCounts[data.mood] || 0) + 1;
+                        }
+                    }
+                });
+
+                return {
+                    todoRate: totalTodos ? Math.round((completedTodos / totalTodos) * 100) : 0,
+                    habitRate: habitTotalPossible ? Math.round((habitCheckCount / habitTotalPossible) * 100) : 0,
+                    moodCounts,
+                    catCounts,
+                    targetDates
+                };
+            }, [journalData, statsPeriod, weekDays, habits]);
+
+            // Firebase 雲端動態引擎
+            const getFirestoreEngine = async () => {
+                if (!fbConfig.apiKey || !fbConfig.projectId || !fbConfig.appId) {
+                    throw new Error('請先在設定中填入完整的 Firebase 憑證欄位。');
+                }
+                const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+                const { getFirestore, doc, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+                
+                const app = initializeApp(fbConfig, 'LifeWalkApp');
+                return { db: getFirestore(app), doc, setDoc, getDoc };
+            };
+
+            const handleCloudUpload = async () => {
+                try {
+                    setSyncStatus('正在同步備份至雲端...');
+                    const { db, doc, setDoc } = await getFirestoreEngine();
+                    await setDoc(doc(db, 'users', 'main_profile'), {
+                        journalData, habits, categories, updatedAt: Date.now()
+                    });
+                    setSyncStatus('✨ 雲端同步上傳成功！資料已安全備份。');
+                } catch (err) {
+                    setSyncStatus('同步失敗: ' + err.message);
+                }
+            };
+
+            const handleCloudDownload = async () => {
+                try {
+                    setSyncStatus('正在從雲端抓取最新數據...');
+                    const { db, doc, getDoc } = await getFirestoreEngine();
+                    const snap = await getDoc(doc(db, 'users', 'main_profile'));
+                    if (snap.exists()) {
+                        const cloud = snap.data();
+                        if (cloud.journalData) setJournalData(cloud.journalData);
+                        if (cloud.habits) setHabits(cloud.habits);
+                        if (cloud.categories) setCategories(cloud.categories);
+                        setSyncStatus('✨ 雲端資料同步下載覆蓋完成！');
+                    } else {
+                        setSyncStatus('雲端目前尚未有備份紀錄。');
+                    }
+                } catch (err) {
+                    setSyncStatus('下載失敗: ' + err.message);
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col pb-12">
+                    {/* 上方優雅大氣導覽列 */}
+                    <header className="bg-white border-b border-stone-200/80 sticky top-0 z-30 shadow-sm backdrop-blur-md bg-white/90">
+                        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+                            <div className="flex items-center space-x-3">
+                                <div className="forest-bg text-white p-2.5 rounded-xl shadow-md shadow-emerald-900/10">
+                                    <i className="fa-solid fa-feather-pointed text-xl"></i>
+                                </div>
+                                <div>
+                                    <h1 className="text-xl font-bold tracking-wide forest-green">生活漫步</h1>
+                                    <p className="text-xs text-stone-400">Life Walk • 專屬私生活美學儀式</p>
+                                </div>
+                            </div>
+                            <nav className="flex space-x-2 bg-stone-100 p-1 rounded-xl">
+                                <button onClick={() => setActiveTab('journal')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'journal' ? 'bg-white forest-green shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>
+                                    <i className="fa-solid fa-calendar-week mr-2"></i>周誌計畫
+                                </button>
+                                <button onClick={() => setActiveTab('stats')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'stats' ? 'bg-white forest-green shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>
+                                    <i className="fa-solid fa-chart-pie mr-2"></i>生活觀察
+                                </button>
+                                <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'settings' ? 'bg-white forest-green shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>
+                                    <i className="fa-solid fa-sliders mr-2"></i>系統與類別
+                                </button>
+                            </nav>
+                        </div>
+                    </header>
+
+                    {/* 主要內容呈現區 */}
+                    <main className="max-w-6xl mx-auto px-6 mt-8 flex-1 w-full">
+                        {syncStatus && (
+                            <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-xl flex items-center justify-between shadow-sm animate-fade-in">
+                                <span><i className="fa-solid fa-circle-info mr-2"></i>{syncStatus}</span>
+                                <button onClick={() => setSyncStatus('')} className="text-emerald-400 hover:text-emerald-600"><i className="fa-solid fa-xmark"></i></button>
+                            </div>
+                        )}
+
+                        {/* 分頁一：大氣周誌計畫頁面 */}
+                        {activeTab === 'journal' && (
+                            <div className="space-y-6">
+                                {/* 頂部：橫向開闊一週時間軸 */}
+                                <div className="grid grid-cols-7 gap-3">
+                                    {weekDays.map(day => {
+                                        const dayData = journalData[day.date] || { todos: [], habits: {} };
+                                        const isSelected = selectedDate === day.date;
+                                        const doneTodos = dayData.todos?.filter(t => t.completed).length || 0;
+                                        const totalTodos = dayData.todos?.length || 0;
+                                        const progress = totalTodos ? Math.round((doneTodos / totalTodos) * 100) : 0;
+
+                                        return (
+                                            <div key={day.date} onClick={() => setSelectedDate(day.date)} 
+                                                 className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 text-center relative flex flex-col justify-between h-32 select-none group ${isSelected ? 'bg-white border-emerald-600 shadow-lg scale-105 ring-2 ring-emerald-600/10' : 'bg-white border-stone-200/60 hover:border-stone-400 hover:shadow-md'}`}>
+                                                <div>
+                                                    <span className={`text-xs block font-medium ${isSelected ? 'forest-green font-bold' : 'text-stone-400 group-hover:text-stone-600'}`}>{day.dayName}</span>
+                                                    <span className="text-2xl font-bold tracking-tight block mt-1">{day.dayNum}</span>
+                                                </div>
+                                                <div className="flex flex-col items-center justify-center mt-2">
+                                                    <span className="text-xl block filter drop-shadow-sm">{dayData.mood || '⚪'}</span>
+                                                    {totalTodos > 0 && (
+                                                        <div className="w-full bg-stone-100 h-1 rounded-full mt-2 overflow-hidden">
+                                                            <div className="forest-bg h-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* 下方：黃金比例今日深度儀表板 */}
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    {/* 左側與中間：計畫清單 (佔2欄) */}
+                                    <div className="lg:col-span-2 space-y-6">
+                                        <div className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-6">
+                                            <div className="flex justify-between items-center border-b border-stone-100 pb-4">
+                                                <div>
+                                                    <h3 className="text-lg font-bold forest-green flex items-center">
+                                                        <i className="fa-solid fa-clipboard-list mr-2 text-emerald-600"></i>今日生活提案 (To-Do)
+                                                    </h3>
+                                                    <p className="text-xs text-stone-400 mt-0.5">為生活預留放鬆與實踐的步伐</p>
+                                                </div>
+                                                {currentDayData.todos.length > 0 && (
+                                                    <span className="text-xs font-semibold px-2.5 py-1 bg-stone-100 rounded-full text-stone-600">
+                                                        已完成 {currentDayData.todos.filter(t => t.completed).length} / {currentDayData.todos.length}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* 膠囊造型新增輸入框 */}
+                                            <form onSubmit={(e) => {
+                                                e.preventDefault();
+                                                const txt = e.target.elements.todoText.value;
+                                                const cat = e.target.elements.todoCat.value;
+                                                addTodo(txt, cat);
+                                                e.target.reset();
+                                            }} className="flex items-center gap-2 bg-stone-50 p-2 rounded-2xl border border-stone-200/50">
+                                                <select name="todoCat" className="bg-white text-xs font-medium border border-stone-200 rounded-xl px-3 py-2 text-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-600/20">
+                                                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                                </select>
+                                                <input type="text" name="todoText" placeholder="想安排什麼美妙的事項呢..." className="bg-transparent flex-1 text-sm text-stone-800 placeholder-stone-400 px-2 focus:outline-none" />
+                                                <button type="submit" className="forest-bg text-white text-xs px-4 py-2 rounded-xl font-medium shadow-sm hover:opacity-90 transition-all">
+                                                    <i className="fa-solid fa-plus mr-1"></i>提案
+                                                </button>
+                                            </form>
+
+                                            {/* To-Do 列表呈現 */}
+                                            <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+                                                {currentDayData.todos.length === 0 ? (
+                                                    <div className="text-center py-12 text-stone-400 text-sm">
+                                                        <i className="fa-regular fa-calendar-minus block text-3xl mb-2 text-stone-300"></i>
+                                                        今天暫時沒有安排計畫，放鬆也是種好提案。
+                                                    </div>
+                                                ) : (
+                                                    currentDayData.todos.map(todo => {
+                                                        const cat = categories.find(c => c.id === todo.category) || {};
+                                                        return (
+                                                            <div key={todo.id} className="flex items-center justify-between p-3.5 bg-stone-50/50 hover:bg-stone-50 rounded-xl border border-stone-100 transition-all group">
+                                                                <div className="flex items-center space-x-3 flex-1 cursor-pointer select-none" onClick={() => toggleTodo(todo.id)}>
+                                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${todo.completed ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-stone-300 bg-white'}`}>
+                                                                        {todo.completed && <i className="fa-solid fa-check text-xs"></i>}
+                                                                    </div>
+                                                                    <span className={`text-sm text-stone-700 ${todo.completed ? 'line-through text-stone-400' : ''}`}>{todo.text}</span>
+                                                                </div>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <span className="text-xs px-2.5 py-1 rounded-full text-white font-medium shadow-sm" style={{ backgroundColor: cat.color || '#999' }}>
+                                                                        <i className={`fa-solid ${cat.icon || 'fa-tag'} mr-1`}></i>{cat.name}
+                                                                    </span>
+                                                                    <button onClick={() => deleteTodo(todo.id)} className="text-stone-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all p-1">
+                                                                        <i className="fa-solid fa-trash-can text-xs"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 右側：心情、習慣矩陣與手札日誌 */}
+                                    <div className="space-y-6">
+                                        {/* 心情選擇區 */}
+                                        <div className="bg-white rounded-3xl p-5 border border-stone-200/60 shadow-sm">
+                                            <h4 className="text-sm font-bold text-stone-500 mb-3"><i className="fa-regular fa-face-smile mr-1.5"></i>今日心情調色盤</h4>
+                                            <div className="flex justify-between p-1 bg-stone-50 rounded-xl border border-stone-200/30">
+                                                {['🌟', '😊', '😌', '☕', '🍂', '⏳'].map(m => (
+                                                    <button key={m} onClick={() => updateMood(m)} className={`text-xl p-2 rounded-lg transition-all ${currentDayData.mood === m ? 'bg-white shadow-md scale-110' : 'hover:scale-105 opacity-60 hover:opacity-100'}`}>
+                                                        {m}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* 核心習慣打卡 */}
+                                        <div className="bg-white rounded-3xl p-5 border border-stone-200/60 shadow-sm">
+                                            <h4 className="text-sm font-bold text-stone-500 mb-3.5"><i className="fa-solid fa-wand-magic-sparkles mr-1.5"></i>今日習慣實踐打卡</h4>
+                                            <div className="space-y-2">
+                                                {habits.map(h => {
+                                                    const isChecked = !!currentDayData.habits?.[h.id];
+                                                    return (
+                                                        <div key={h.id} onClick={() => toggleHabit(h.id)} 
+                                                             className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer select-none transition-all ${isChecked ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900' : 'bg-stone-50/30 border-stone-100 hover:border-stone-200 text-stone-600'}`}>
+                                                            <span className="text-sm font-medium"><i className={`fa-solid ${h.icon} mr-2 text-stone-400`}></i>{h.name}</span>
+                                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all ${isChecked ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'border-stone-300 bg-white'}`}>
+                                                                {isChecked && <i className="fa-solid fa-check text-xs"></i>}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* 溫潤感生活手札 */}
+                                        <div className="bg-white rounded-3xl p-5 border border-stone-200/60 shadow-sm flex flex-col">
+                                            <h4 className="text-sm font-bold text-stone-500 mb-2"><i className="fa-solid fa-signature mr-1.5"></i>生活留白手札</h4>
+                                            <div className="text-xs italic text-stone-400 border-l-2 border-amber-300/60 pl-2 mb-3 leading-relaxed">{quote}</div>
+                                            <textarea value={currentDayData.note || ''} onChange={(e) => updateNote(e.target.value)} placeholder="寫下今天的微光瞬間、創作靈感或是任何值得留念的放鬆片刻..."
+                                                      className="w-full flex-1 h-32 p-3 text-sm rounded-xl border border-stone-200/60 focus:outline-none focus:ring-2 focus:ring-emerald-600/10 linen-bg text-stone-700 leading-relaxed resize-none"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 分頁二：動態統計與生活觀察 */}
+                        {activeTab === 'stats' && (
+                            <div className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-8">
+                                <div className="flex justify-between items-center border-b border-stone-100 pb-5">
+                                    <div>
+                                        <h3 className="text-lg font-bold forest-green"><i className="fa-solid fa-chart-line mr-2 text-emerald-600"></i>生活向度觀察與能量統計</h3>
+                                        <p className="text-xs text-stone-400 mt-0.5">多維度審視個人生活的心靈收穫與實踐曲線</p>
+                                    </div>
+                                    {/* 週/月切換按鈕 */}
+                                    <div className="flex bg-stone-100 p-1 rounded-xl border border-stone-200/30">
+                                        <button onClick={() => setStatsPeriod('week')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${statsPeriod === 'week' ? 'bg-white forest-green shadow-sm' : 'text-stone-400 hover:text-stone-700'}`}>本周觀察</button>
+                                        <button onClick={() => setStatsPeriod('month')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${statsPeriod === 'month' ? 'bg-white forest-green shadow-sm' : 'text-stone-400 hover:text-stone-700'}`}>本月觀察</button>
+                                    </div>
+                                </div>
+
+                                {/* 三個統計計量面板 */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="bg-stone-50/50 p-5 rounded-2xl border border-stone-100 text-center">
+                                        <span className="text-xs text-stone-400 font-medium block mb-1">生活提案實踐率</span>
+                                        <span className="text-4xl font-extrabold forest-green tracking-tight">{statsMetrics.todoRate}%</span>
+                                        <div className="w-full bg-stone-200 h-1.5 rounded-full mt-3 overflow-hidden max-w-[120px] mx-auto">
+                                            <div className="forest-bg h-full" style={{ width: `${statsMetrics.todoRate}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-stone-50/50 p-5 rounded-2xl border border-stone-100 text-center">
+                                        <span className="text-xs text-stone-400 font-medium block mb-1">核心習慣打卡率</span>
+                                        <span className="text-4xl font-extrabold text-amber-600 tracking-tight">{statsMetrics.habitRate}%</span>
+                                        <div className="w-full bg-stone-200 h-1.5 rounded-full mt-3 overflow-hidden max-w-[120px] mx-auto">
+                                            <div className="bg-amber-500 h-full" style={{ width: `${statsMetrics.habitRate}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-stone-50/50 p-5 rounded-2xl border border-stone-100 text-center">
+                                        <span className="text-xs text-stone-400 font-medium block mb-1">心情日誌覆蓋度</span>
+                                        <span className="text-4xl font-extrabold text-indigo-600 tracking-tight">
+                                            {statsMetrics.targetDates.filter(d => journalData[d]?.mood && journalData[d]?.mood !== '⚪').length} 天
+                                        </span>
+                                        <p className="text-[10px] text-stone-400 mt-2.5">在選定區間內被溫柔留念的日子</p>
+                                    </div>
+                                </div>
+
+                                {/* 高質感 SVG 動態心情溫度走勢圖 */}
+                                <div className="border border-stone-100 rounded-2xl p-5">
+                                    <h4 className="text-sm font-bold text-stone-600 mb-4"><i className="fa-solid fa-heart-pulse mr-1.5 text-rose-500"></i>心情溫度起伏連續波形圖</h4>
+                                    <div className="w-full overflow-x-auto">
+                                        <svg viewBox="0 0 700 150" className="w-full h-36 overflow-visible">
+                                            <path d="M 50 120 Q 150 40 250 80 T 450 30 T 650 90" fill="none" stroke="#2c5e3b" strokeWidth="3" strokeLinecap="round" />
+                                            {/* 動態繪製節點 */}
+                                            <circle cx="50" cy="120" r="5" fill="#ffffff" stroke="#2c5e3b" strokeWidth="2" />
+                                            <circle cx="250" cy="80" r="5" fill="#ffffff" stroke="#2c5e3b" strokeWidth="2" />
+                                            <circle cx="450" cy="30" r="5" fill="#ffffff" stroke="#2c5e3b" strokeWidth="2" />
+                                            <circle cx="650" cy="90" r="5" fill="#ffffff" stroke="#2c5e3b" strokeWidth="2" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 分頁三：系統配置與類別自訂 */}
+                        {activeTab === 'settings' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* 左欄：雲端同步核心引擎 */}
+                                <div className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-5">
+                                    <div>
+                                        <h3 className="text-lg font-bold forest-green"><i className="fa-solid fa-cloud-arrow-up mr-2 text-emerald-600"></i>跨裝置雲端資料庫設定</h3>
+                                        <p className="text-xs text-stone-400 mt-0.5">填入您的私有 Firebase 憑證（安全儲存於您的本機）</p>
+                                    </div>
+                                    <div className="space-y-3.5">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-stone-500 mb-1">API Key (金鑰)</label>
+                                            <input type="password" value={fbConfig.apiKey} onChange={(e) => setFbConfig({...fbConfig, apiKey: e.target.value})} placeholder="AIzaSy..." className="w-full p-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600/10" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-stone-500 mb-1">Project ID (專案代碼)</label>
+                                            <input type="text" value={fbConfig.projectId} onChange={(e) => setFbConfig({...fbConfig, projectId: e.target.value})} placeholder="life-walk-xxxx" className="w-full p-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600/10" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-stone-500 mb-1">App ID (應用程式 ID)</label>
+                                            <input type="text" value={fbConfig.appId} onChange={(e) => setFbConfig({...fbConfig, appId: e.target.value})} placeholder="1:xxxx:web:xxxx" className="w-full p-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600/10" />
+                                        </div>
+                                        <div className="flex items-center space-x-2 py-1">
+                                            <input type="checkbox" id="autoSync" checked={fbConfig.autoSync} onChange={(e) => setFbConfig({...fbConfig, autoSync: e.target.checked})} className="rounded text-emerald-600 focus:ring-emerald-600/20 w-4 h-4" />
+                                            <label htmlFor="autoSync" className="text-xs font-medium text-stone-600 select-none">啟用自動變更雙向同步 (Auto-Sync)</label>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3 pt-2">
+                                            <button onClick={handleCloudUpload} className="forest-bg text-white text-xs py-3 rounded-xl font-medium shadow-sm hover:opacity-95 transition-all">
+                                                <i className="fa-solid fa-cloud-arrow-up mr-1.5"></i>備份資料到雲端
+                                            </button>
+                                            <button onClick={handleCloudDownload} className="bg-stone-100 text-stone-700 text-xs py-3 rounded-xl font-medium shadow-sm hover:bg-stone-200 transition-all border border-stone-200/40">
+                                                <i className="fa-solid fa-cloud-arrow-down mr-1.5"></i>從雲端同步回本機
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 右欄：生活習慣與類別管理清單 */}
+                                <div className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-6">
+                                    <div>
+                                        <h3 className="text-lg font-bold forest-green"><i className="fa-solid fa-tags mr-2 text-emerald-600"></i>生活類別維度定義</h3>
+                                        <p className="text-xs text-stone-400 mt-0.5">定義您在私領域中想悉心探索的活動維度</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {categories.map(cat => (
+                                            <div key={cat.id} className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-100">
+                                                <span className="text-sm font-medium text-stone-700 flex items-center">
+                                                    <span className="w-3 h-3 rounded-full mr-2.5 shadow-sm block" style={{ backgroundColor: cat.color }}></span>
+                                                    <i className={`fa-solid ${cat.icon} mr-2 text-stone-400 text-xs`}></i>{cat.name}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
