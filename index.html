@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>生活漫步 Life Walk — 每周生活提案與溫馨日誌</title>
+    <!-- 載入 Tailwind CSS 與 FontAwesome 圖示 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- 核心安全防護：相容版 Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
@@ -22,6 +24,7 @@
 <body>
     <div id="root"></div>
 
+    <!-- 載入 React 核心與 Babel -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -43,19 +46,8 @@
             { id: 'h-3', name: '核心訓練與拉筋伸展', category: 'cat-2', icon: 'fa-child-reaching' }
         ];
 
-        // 豐富的多週初始數據（包含 5/25 當週與 6/01 當週），確保切換前後皆有精美圖表
         const INITIAL_MOCK_DATA = {
-            // --- 5/25 上一週數據 ---
-            '2025-05-26': {
-                todos: [{ id: 'prev-1', text: '骨架姿勢速寫練習 10 張', completed: true, category: 'cat-1' }],
-                habits: { 'h-1': true, 'h-2': true, 'h-3': false }, mood: '😌'
-            },
-            '2025-05-28': {
-                todos: [{ id: 'prev-2', text: '夜間慢跑 30 分鐘', completed: true, category: 'cat-2' }],
-                habits: { 'h-1': false, 'h-2': true, 'h-3': true }, mood: '☀️'
-            },
-            // --- 6/01 當週豐富數據 ---
-            '2025-06-01': {
+            '2026-06-01': {
                 todos: [
                     { id: 't1', text: '整理書桌並換上新盆栽', completed: true, category: 'cat-5' },
                     { id: 't2', text: '寫下 3 件今天感恩的事', completed: false, category: 'cat-4' },
@@ -63,7 +55,7 @@
                 ],
                 habits: { 'h-1': true, 'h-2': true, 'h-3': false }, mood: '🥰', note: '整理完空間精神好多了！創作專案線稿靈感很棒。'
             },
-            '2025-06-02': {
+            '2026-06-02': {
                 todos: [
                     { id: 't4', text: '核心肌群訓練與有氧 30 分鐘', completed: true, category: 'cat-2' },
                     { id: 't5', text: '閱讀美學雜誌 2 章節', completed: true, category: 'cat-3' },
@@ -71,7 +63,7 @@
                 ],
                 habits: { 'h-1': true, 'h-2': true, 'h-3': true }, mood: '😊', note: '運動完多巴胺滿滿，晚上閱讀也很有收穫！'
             },
-            '2025-06-03': {
+            '2026-06-03': {
                 todos: [
                     { id: 't7', text: '慢跑 5 公里流流汗', completed: true, category: 'cat-2' },
                     { id: 't8', text: '睡前深層冥想 15 分鐘', completed: true, category: 'cat-4' },
@@ -79,14 +71,14 @@
                 ],
                 habits: { 'h-1': true, 'h-2': true, 'h-3': true }, mood: '😌', note: '水洗耶加雪菲的柑橘香氣極佳，冥想也讓心思沉澱下來。'
             },
-            '2025-06-04': {
+            '2026-06-04': {
                 todos: [
                     { id: 't10', text: '去植物店挑選新多肉植物', completed: true, category: 'cat-5' },
                     { id: 't11', text: '室內拉伸放鬆操 20 分鐘', completed: true, category: 'cat-2' }
                 ],
                 habits: { 'h-1': false, 'h-2': true, 'h-3': true }, mood: '🌱', note: '買到了圓葉山烏龜！擺在窗台看著就覺得心靈被治癒了。'
             },
-            '2025-06-05': {
+            '2026-06-05': {
                 todos: [
                     { id: 't13', text: '慢跑放鬆 3 公里', completed: true, category: 'cat-2' },
                     { id: 't14', text: '閱讀心靈放鬆書籍 30 頁', completed: true, category: 'cat-3' },
@@ -94,14 +86,14 @@
                 ],
                 habits: { 'h-1': true, 'h-2': true, 'h-3': true }, mood: '☀️', note: '線稿跟上色都順利推進，週末前把重要創作進度完成了！'
             },
-            '2025-06-06': {
+            '2026-06-06': {
                 todos: [
                     { id: 't16', text: '和好友約在溫馨咖啡廳餐敘', completed: true, category: 'cat-5' },
                     { id: 't18', text: '散步慢走 40 分鐘', completed: true, category: 'cat-2' }
                 ],
                 habits: { 'h-1': false, 'h-2': true, 'h-3': true }, mood: '☕', note: '聊了好多創作跟生活的新想法，非常充實的週末午後。'
             },
-            '2025-06-07': {
+            '2026-06-07': {
                 todos: [
                     { id: 't19', text: '寫下 5 件這週感恩的留白時光', completed: true, category: 'cat-4' },
                     { id: 't20', text: '整理下週漫步生活提案規劃', completed: true, category: 'cat-4' }
@@ -114,8 +106,8 @@
 
         function App() {
             const [activeTab, setActiveTab] = useState('journal'); 
-            const [selectedDate, setSelectedDate] = useState('2025-06-01'); // 當前選取的天
-            const [currentWeekStart, setCurrentWeekStart] = useState(new Date('2025-06-01')); // 當前週的起點 (週一)
+            const [selectedDate, setSelectedDate] = useState('2026-06-01');
+            const [currentWeekStart, setCurrentWeekStart] = useState(new Date('2026-06-01'));
             const [statsPeriod, setStatsPeriod] = useState('week');
 
             const [categories, setCategories] = useState(() => {
@@ -145,7 +137,6 @@
             useEffect(() => { localStorage.setItem('lw_habits', JSON.stringify(habits)); }, [habits]);
             useEffect(() => { localStorage.setItem('lw_fb_config', JSON.stringify(fbConfig)); }, [fbConfig]);
 
-            // 【完全復原：動態推算整週日曆】
             const weekDays = useMemo(() => {
                 const days = [];
                 const start = new Date(currentWeekStart);
@@ -164,7 +155,6 @@
                 return days;
             }, [currentWeekStart]);
 
-            // 切換前一週 / 後一週
             const handlePrevWeek = () => {
                 const newStart = new Date(currentWeekStart);
                 newStart.setDate(newStart.getDate() - 7);
@@ -188,13 +178,9 @@
                 });
             }, [habits, weekDays, journalData]);
 
-            // 【完全復原：支援「週 ⇄ 月」大尺度的統計分析引擎】
             const statsMetrics = useMemo(() => {
-                // 如果切換成月觀察，自動抓取當前週所屬月份（例如 2025-06）的所有天數
                 const currentMonthStr = weekDays[0].date.substring(0, 7); 
-                const targetDates = statsPeriod === 'week' 
-                    ? weekDays.map(d => d.date)
-                    : Object.keys(journalData).filter(d => d.startsWith(currentMonthStr));
+                const targetDates = statsPeriod === 'week' ? weekDays.map(d => d.date) : Object.keys(journalData).filter(d => d.startsWith(currentMonthStr));
 
                 let totalTodos = 0, completedTodos = 0;
                 let habitCheckCount = 0, habitTotalPossible = targetDates.length * habits.length;
@@ -240,20 +226,13 @@
                     return { ...cat, count, percentage, strokeLength, offset };
                 });
 
-                return {
-                    todoRate: totalTodos ? Math.round((completedTodos / totalTodos) * 100) : 0,
-                    habitRate: habitTotalPossible ? Math.round((habitCheckCount / habitTotalPossible) * 100) : 0,
-                    completedTodos, dominantMood, dominantMoodCount: maxMoodCount || 1, pieSlices, targetDates
-                };
+                return { todoRate: totalTodos ? Math.round((completedTodos / totalTodos) * 100) : 0, habitRate: habitTotalPossible ? Math.round((habitCheckCount / habitTotalPossible) * 100) : 0, completedTodos, dominantMood, dominantMoodCount: maxMoodCount || 1, pieSlices, targetDates };
             }, [journalData, statsPeriod, weekDays, habits, categories]);
 
             const addTodo = (text, categoryId) => {
                 if (!text.trim()) return;
                 const newTodo = { id: 'todo-' + Date.now(), text, completed: false, category: categoryId };
-                setJournalData(prev => ({
-                    ...prev,
-                    [selectedDate]: { ...currentDayData, todos: [...(currentDayData.todos || []), newTodo] }
-                }));
+                setJournalData(prev => ({ ...prev, [selectedDate]: { ...currentDayData, todos: [...(currentDayData.todos || []), newTodo] } }));
             };
 
             const toggleTodo = (todoId) => {
@@ -266,16 +245,50 @@
                 setJournalData(prev => ({ ...prev, [selectedDate]: { ...currentDayData, todos: updatedTodos } }));
             };
 
-            const updateMood = (mood) => {
-                setJournalData(prev => ({ ...prev, [selectedDate]: { ...currentDayData, mood } }));
+            const updateMood = (mood) => { setJournalData(prev => ({ ...prev, [selectedDate]: { ...currentDayData, mood } })); };
+            const updateNote = (note) => { setJournalData(prev => ({ ...prev, [selectedDate]: { ...currentDayData, note } })); };
+
+            const handleCloudUpload = () => {
+                if (!fbConfig.apiKey || !fbConfig.projectId || !fbConfig.appId) {
+                    setSyncStatus('同步失敗: 請先在設定中填入完整的 Firebase 憑證欄位。');
+                    return;
+                }
+                try {
+                    setSyncStatus('正在同步備份至雲端...');
+                    if (firebase.apps.length === 0) {
+                        firebase.initializeApp({ apiKey: fbConfig.apiKey, authDomain: `${fbConfig.projectId}.firebaseapp.com`, projectId: fbConfig.projectId, appId: fbConfig.appId });
+                    }
+                    firebase.firestore().collection('users').doc('main_profile').set({ journalData, habits, categories, updatedAt: Date.now() }, { merge: true }).then(() => {
+                        setSyncStatus('✨ 雲端同步上傳成功！資料已安全備份。');
+                    }).catch(err => setSyncStatus('同步失敗: ' + err.message));
+                } catch (err) { setSyncStatus('同步失敗: ' + err.message); }
             };
 
-            const updateNote = (note) => {
-                setJournalData(prev => ({ ...prev, [selectedDate]: { ...currentDayData, note } }));
+            const handleCloudDownload = () => {
+                if (!fbConfig.apiKey || !fbConfig.projectId || !fbConfig.appId) {
+                    setSyncStatus('下載失敗: 請先在設定中填入完整的 Firebase 憑證欄位。');
+                    return;
+                }
+                try {
+                    setSyncStatus('正在從雲端抓取最新數據...');
+                    if (firebase.apps.length === 0) {
+                        firebase.initializeApp({ apiKey: fbConfig.apiKey, authDomain: `${fbConfig.projectId}.firebaseapp.com`, projectId: fbConfig.projectId, appId: fbConfig.appId });
+                    }
+                    firebase.firestore().collection('users').doc('main_profile').get().then((docSnap) => {
+                        if (docSnap.exists) {
+                            const cloud = docSnap.data();
+                            if (cloud.journalData) setJournalData(cloud.journalData);
+                            if (cloud.habits) setHabits(cloud.habits);
+                            if (cloud.categories) setCategories(cloud.categories);
+                            setSyncStatus('✨ 雲端資料同步下載覆蓋完成！');
+                        } else { setSyncStatus('雲端目前尚未有備份紀錄。'); }
+                    }).catch(err => setSyncStatus('下載失敗: ' + err.message));
+                } catch (err) { setSyncStatus('下載失敗: ' + err.message); }
             };
 
             return (
                 <div className="min-h-screen flex flex-col pb-16">
+                    {/* 頂部大氣導覽列 */}
                     <header className="bg-white border-b border-stone-200/60 sticky top-0 z-40 backdrop-blur-md shadow-sm">
                         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
                             <div className="flex items-center space-x-3">
@@ -295,10 +308,16 @@
                     </header>
 
                     <main className="max-w-6xl mx-auto px-6 mt-6 flex-1 w-full">
+                        {syncStatus && (
+                            <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs rounded-xl flex items-center justify-between custom-shadow">
+                                <span><i className="fa-solid fa-circle-info mr-2"></i>{syncStatus}</span>
+                                <button onClick={() => setSyncStatus('')} className="text-emerald-400 hover:text-emerald-600"><i className="fa-solid fa-xmark"></i></button>
+                            </div>
+                        )}
+
                         {/* 周誌計畫分頁 */}
                         {activeTab === 'journal' && (
                             <div className="space-y-6">
-                                {/* 【點擊修復】週別雙向箭頭滾動面板 */}
                                 <div className="bg-white rounded-2xl p-4 border border-stone-200/60 custom-shadow flex items-center justify-between">
                                     <button onClick={handlePrevWeek} className="p-2 hover:bg-stone-50 rounded-xl border border-stone-200/40 text-stone-400 hover:text-stone-700 transition-all"><i className="fa-solid fa-chevron-left"></i></button>
                                     <div className="text-center select-none">
@@ -377,7 +396,7 @@
                                                                 </div>
                                                                 <span className={`text-xs ${t.completed ? 'line-through text-stone-400' : 'text-stone-700'}`}>{t.text}</span>
                                                             </div>
-                                                            <span className="text-[10px] px-2.5 py-0.5 rounded-full text-white font-medium" style={{ backgroundColor: cat.color }}>{cat.name}</span>
+                                                            <span className="text-[10px] px-2.5 py-0.5 rounded-full text-white font-medium shadow-sm" style={{ backgroundColor: cat.color }}>{cat.name}</span>
                                                         </div>
                                                     );
                                                 })
@@ -404,7 +423,7 @@
                             </div>
                         )}
 
-                        {/* 分頁二：習慣挑戰 */}
+                        {/* 習慣挑戰分頁 */}
                         {activeTab === 'habits' && (
                             <div className="bg-white rounded-2xl p-6 border border-stone-200/60 custom-shadow space-y-6">
                                 <div className="border-b border-stone-100 pb-4">
@@ -453,12 +472,12 @@
                             </div>
                         )}
 
-                        {/* 分頁三：生活觀察 */}
+                        {/* 生活觀察分頁 */}
                         {activeTab === 'stats' && (
                             <div className="space-y-6">
                                 <div className="bg-white rounded-2xl p-6 border border-stone-200/60 custom-shadow flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                                     <div>
-                                        <h3 className="text-base font-bold text-stone-800 flex items-center"><i className="fa-solid fa-chart-pie mr-2 text-emerald-600"></i>本周生活提案觀察</h3>
+                                        <h3 className="text-base font-bold text-stone-800 flex items-center"><i className="fa-solid fa-chart-pie mr-2 text-emerald-600"></i>生活提案觀察分析</h3>
                                         <p className="text-xs text-stone-400 mt-0.5">觀察這段時間的生活重心，適時調研生活步調</p>
                                     </div>
                                     <div className="flex bg-stone-100 p-1 rounded-xl text-xs border border-stone-200/30">
@@ -562,28 +581,51 @@
                             </div>
                         )}
 
-                        {/* 系統設定分頁 */}
+                        {/* 【100% 徹底修復：再也不會空白的系統設定頁】 */}
                         {activeTab === 'settings' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* 左側：雲端連線卡片 */}
                                 <div className="bg-white rounded-2xl p-6 border border-stone-200/60 custom-shadow space-y-5">
-                                    <h3 className="text-base font-bold forest-green"><i className="fa-solid fa-cloud mr-2 text-emerald-600"></i>跨裝置雲端資料庫設定</h3>
-                                    <div className="space-y-3">
+                                    <div className="border-b border-stone-100 pb-3">
+                                        <h3 className="text-base font-bold text-stone-800 flex items-center"><i className="fa-solid fa-cloud mr-2 text-emerald-600"></i>跨裝置雲端資料庫設定</h3>
+                                        <p className="text-xs text-stone-400 mt-0.5">填入您自己的私有 Firebase 金鑰憑證</p>
+                                    </div>
+                                    <div className="space-y-3.5">
                                         <div>
-                                            <label className="block text-[11px] font-semibold text-stone-400 mb-1">API Key</label>
-                                            <input type="password" value={fbConfig.apiKey} onChange={(e) => setFbConfig({...fbConfig, apiKey: e.target.value})} placeholder="AIzaSy..." className="w-full p-2 text-xs border border-stone-200 rounded-lg focus:outline-none" />
+                                            <label className="block text-[11px] font-semibold text-stone-500 mb-1">API Key (金鑰)</label>
+                                            <input type="password" value={fbConfig.apiKey || ''} onChange={(e) => setFbConfig({...fbConfig, apiKey: e.target.value})} placeholder="AIzaSy..." className="w-full p-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600/10" />
                                         </div>
                                         <div>
-                                            <label className="block text-[11px] font-semibold text-stone-400 mb-1">Project ID</label>
-                                            <input type="text" value={fbConfig.projectId} onChange={(e) => setFbConfig({...fbConfig, projectId: e.target.value})} placeholder="life-walk-xxxx" className="w-full p-2 text-xs border border-stone-200 rounded-lg focus:outline-none" />
+                                            <label className="block text-[11px] font-semibold text-stone-400 mb-1">Project ID (專案代碼)</label>
+                                            <input type="text" value={fbConfig.projectId || ''} onChange={(e) => setFbConfig({...fbConfig, projectId: e.target.value})} placeholder="life-walk-xxxx" className="w-full p-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600/10" />
                                         </div>
                                         <div>
-                                            <label className="block text-[11px] font-semibold text-stone-400 mb-1">App ID</label>
-                                            <input type="text" value={fbConfig.appId} onChange={(e) => setFbConfig({...fbConfig, appId: e.target.value})} placeholder="1:xxxx" className="w-full p-2 text-xs border border-stone-200 rounded-lg focus:outline-none" />
+                                            <label className="block text-[11px] font-semibold text-stone-400 mb-1">App ID (應用程式 ID)</label>
+                                            <input type="text" value={fbConfig.appId || ''} onChange={(e) => setFbConfig({...fbConfig, appId: e.target.value})} placeholder="1:xxxx" className="w-full p-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600/10" />
                                         </div>
                                         <div className="grid grid-cols-2 gap-3 pt-3">
-                                            <button onClick={handleCloudUpload} className="forest-bg text-white text-xs py-2.5 rounded-xl font-medium shadow-sm"><i className="fa-solid fa-cloud-arrow-up mr-1"></i>上傳到雲端</button>
-                                            <button onClick={handleCloudDownload} className="bg-stone-100 text-stone-700 text-xs py-2.5 rounded-xl font-medium border border-stone-200/30"><i className="fa-solid fa-cloud-arrow-down mr-1"></i>自雲端下載</button>
+                                            <button onClick={handleCloudUpload} className="forest-bg text-white text-xs py-3 rounded-xl font-medium shadow-sm transition-all hover:opacity-95"><i className="fa-solid fa-cloud-arrow-up mr-1.5"></i>上傳到雲端</button>
+                                            <button onClick={handleCloudDownload} className="bg-stone-100 text-stone-700 text-xs py-3 rounded-xl font-medium border border-stone-200/30 transition-all hover:bg-stone-200"><i className="fa-solid fa-cloud-arrow-down mr-1.5"></i>自雲端下載</button>
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* 右側：生活類別展示卡片 */}
+                                <div className="bg-white rounded-2xl p-6 border border-stone-200/60 custom-shadow space-y-4">
+                                    <div className="border-b border-stone-100 pb-3">
+                                        <h3 className="text-base font-bold text-stone-800 flex items-center"><i className="fa-solid fa-tags mr-2 text-emerald-600"></i>生活維度色彩定義</h3>
+                                        <p className="text-xs text-stone-400 mt-0.5">目前系統已定義的核心私領域活動向度</p>
+                                    </div>
+                                    <div className="space-y-2.5">
+                                        {categories.map(cat => (
+                                            <div key={cat.id} className="flex items-center justify-between p-3.5 bg-stone-50/60 rounded-xl border border-stone-100 hover:bg-stone-50 transition-all">
+                                                <span className="text-xs font-semibold text-stone-700 flex items-center">
+                                                    <span className="w-3 h-3 rounded-full mr-3 shadow-sm block" style={{ backgroundColor: cat.color }}></span>
+                                                    <i className={`fa-solid ${cat.icon} mr-2 text-stone-400`}></i>{cat.name}
+                                                </span>
+                                                <span className="text-[10px] text-stone-400 bg-white px-2 py-0.5 rounded border border-stone-200/40">{cat.color}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
