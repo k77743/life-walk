@@ -6,14 +6,17 @@
     <title>生活漫步 Life Walk — 每周生活提案與溫馨日誌</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f4f6f0; color: #2c3e29; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8f9f6; color: #2c3e29; }
         .linen-bg { background-color: #fdfbf7; }
         .forest-green { color: #2c5e3b; }
         .forest-bg { background-color: #2c5e3b; }
-        .forest-bg-light { background-color: #eef3eb; }
-        .accent-gold { color: #d4af37; }
+        .custom-shadow { box-shadow: 0 10px 30px -5px rgba(44, 94, 59, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.02); }
     </style>
 </head>
 <body>
@@ -23,180 +26,183 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <script type="text/babel" data-type="module">
+    <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // 預設生活類別範例
         const DEFAULT_CATEGORIES = [
-            { id: 'cat-1', name: '個人創作', color: '#8ebf9d', icon: 'fa-palette' },
-            { id: 'cat-2', name: '身體動能', color: '#e8a382', icon: 'fa-running' },
-            { id: 'cat-3', name: '閱讀養分', color: '#8fa8cd', icon: 'fa-book-open' },
-            { id: 'cat-4', name: '心靈綠洲', color: '#bca3cd', icon: 'fa-leaf' },
-            { id: 'cat-5', name: '生活微光', color: '#eed180', icon: 'fa-wand-magic-sparkles' }
+            { id: 'cat-1', name: '個人創作', color: '#6366f1', icon: 'fa-palette' },
+            { id: 'cat-2', name: '身體動能', color: '#10b981', icon: 'fa-running' },
+            { id: 'cat-3', name: '閱讀養分', color: '#0ea5e9', icon: 'fa-book-open' },
+            { id: 'cat-4', name: '心靈綠洲', color: '#ec4899', icon: 'fa-leaf' },
+            { id: 'cat-5', name: '生活微光', color: '#f59e0b', icon: 'fa-wand-magic-sparkles' }
         ];
 
-        // 隨機心靈引言
-        const QUOTES = [
-            "慢下來，靈感就在與自己對話的空隙中萌芽。",
-            "每一次的閱讀與創作，都是在灌溉內心的秘密花園。",
-            "汗水是身體對生活熱情的最佳回應。",
-            "在日子的夾縫中捕捉微光，生活便有了詩意。"
+        const INITIAL_HABITS = [
+            { id: 'h-1', name: '每日創作 30 分鐘', category: 'cat-1', icon: 'fa-pen-fancy' },
+            { id: 'h-2', name: '充足飲水 2000cc', category: 'cat-5', icon: 'fa-droplet' },
+            { id: 'h-3', name: '核心訓練與拉筋伸展', category: 'cat-2', icon: 'fa-child-reaching' }
         ];
+
+        // 豐富的多週初始數據（包含 5/25 當週與 6/01 當週），確保切換前後皆有精美圖表
+        const INITIAL_MOCK_DATA = {
+            // --- 5/25 上一週數據 ---
+            '2025-05-26': {
+                todos: [{ id: 'prev-1', text: '骨架姿勢速寫練習 10 張', completed: true, category: 'cat-1' }],
+                habits: { 'h-1': true, 'h-2': true, 'h-3': false }, mood: '😌'
+            },
+            '2025-05-28': {
+                todos: [{ id: 'prev-2', text: '夜間慢跑 30 分鐘', completed: true, category: 'cat-2' }],
+                habits: { 'h-1': false, 'h-2': true, 'h-3': true }, mood: '☀️'
+            },
+            // --- 6/01 當週豐富數據 ---
+            '2025-06-01': {
+                todos: [
+                    { id: 't1', text: '整理書桌並換上新盆栽', completed: true, category: 'cat-5' },
+                    { id: 't2', text: '寫下 3 件今天感恩的事', completed: false, category: 'cat-4' },
+                    { id: 't3', text: '繪製 2D 戰鬥場景新草稿', completed: true, category: 'cat-1' }
+                ],
+                habits: { 'h-1': true, 'h-2': true, 'h-3': false }, mood: '🥰', note: '整理完空間精神好多了！創作專案線稿靈感很棒。'
+            },
+            '2025-06-02': {
+                todos: [
+                    { id: 't4', text: '核心肌群訓練與有氧 30 分鐘', completed: true, category: 'cat-2' },
+                    { id: 't5', text: '閱讀美學雜誌 2 章節', completed: true, category: 'cat-3' },
+                    { id: 't6', text: 'Blender 骨架工具操作練習', completed: true, category: 'cat-1' }
+                ],
+                habits: { 'h-1': true, 'h-2': true, 'h-3': true }, mood: '😊', note: '運動完多巴胺滿滿，晚上閱讀也很有收穫！'
+            },
+            '2025-06-03': {
+                todos: [
+                    { id: 't7', text: '慢跑 5 公里流流汗', completed: true, category: 'cat-2' },
+                    { id: 't8', text: '睡前深層冥想 15 分鐘', completed: true, category: 'cat-4' },
+                    { id: 't9', text: '手沖精品咖啡豆風味嘗試', completed: true, category: 'cat-5' }
+                ],
+                habits: { 'h-1': true, 'h-2': true, 'h-3': true }, mood: '😌', note: '水洗耶加雪菲的柑橘香氣極佳，冥想也讓心思沉澱下來。'
+            },
+            '2025-06-04': {
+                todos: [
+                    { id: 't10', text: '去植物店挑選新多肉植物', completed: true, category: 'cat-5' },
+                    { id: 't11', text: '室內拉伸放鬆操 20 分鐘', completed: true, category: 'cat-2' }
+                ],
+                habits: { 'h-1': false, 'h-2': true, 'h-3': true }, mood: '🌱', note: '買到了圓葉山烏龜！擺在窗台看著就覺得心靈被治癒了。'
+            },
+            '2025-06-05': {
+                todos: [
+                    { id: 't13', text: '慢跑放鬆 3 公里', completed: true, category: 'cat-2' },
+                    { id: 't14', text: '閱讀心靈放鬆書籍 30 頁', completed: true, category: 'cat-3' },
+                    { id: 't15', text: '私人創作專案上色完工', completed: true, category: 'cat-1' }
+                ],
+                habits: { 'h-1': true, 'h-2': true, 'h-3': true }, mood: '☀️', note: '線稿跟上色都順利推進，週末前把重要創作進度完成了！'
+            },
+            '2025-06-06': {
+                todos: [
+                    { id: 't16', text: '和好友約在溫馨咖啡廳餐敘', completed: true, category: 'cat-5' },
+                    { id: 't18', text: '散步慢走 40 分鐘', completed: true, category: 'cat-2' }
+                ],
+                habits: { 'h-1': false, 'h-2': true, 'h-3': true }, mood: '☕', note: '聊了好多創作跟生活的新想法，非常充實的週末午後。'
+            },
+            '2025-06-07': {
+                todos: [
+                    { id: 't19', text: '寫下 5 件這週感恩的留白時光', completed: true, category: 'cat-4' },
+                    { id: 't20', text: '整理下週漫步生活提案規劃', completed: true, category: 'cat-4' }
+                ],
+                habits: { 'h-1': true, 'h-2': true, 'h-3': false }, mood: '📝', note: '好好的留白、好好的收尾，為了新的一週充滿能量。'
+            }
+        };
+
+        const MOOD_Y_MAP = { '🥰': 20, '🌟': 20, '😊': 45, '😌': 65, '🌱': 95, '☀️': 45, '☕': 75, '📝': 95, '⚪': 95 };
 
         function App() {
             const [activeTab, setActiveTab] = useState('journal'); 
-            const [statsPeriod, setStatsPeriod] = useState('week'); 
-            const [selectedDate, setSelectedDate] = useState('2026-06-01');
-            const [quote, setQuote] = useState(QUOTES[0]);
+            const [selectedDate, setSelectedDate] = useState('2025-06-01'); // 當前選取的天
+            const [currentWeekStart, setCurrentWeekStart] = useState(new Date('2025-06-01')); // 當前週的起點 (週一)
+            const [statsPeriod, setStatsPeriod] = useState('week');
 
             const [categories, setCategories] = useState(() => {
                 const saved = localStorage.getItem('lw_categories');
                 return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
             });
 
-            const [journalData, setJournalData] = useState(() => {
-                const saved = localStorage.getItem('lw_journal_data');
-                if (saved) return JSON.parse(saved);
-                
-                return {
-                    '2026-06-01': {
-                        todos: [
-                            { id: 't1', text: '繪製 2D 戰鬥場景草稿', completed: true, category: 'cat-1' },
-                            { id: 't2', text: '核心肌群訓練 30 分鐘', completed: false, category: 'cat-2' },
-                            { id: 't3', text: '閱讀美學雜誌 2 章節', completed: true, category: 'cat-3' }
-                        ],
-                        habits: { 'h-1': true, 'h-2': true, 'h-3': false },
-                        mood: '😊',
-                        note: '今天創作手感很好，傍晚散步時吹來的微風很舒服。'
-                    },
-                    '2026-06-02': {
-                        todos: [
-                            { id: 't4', text: 'Blender 骨架工具操作練習', completed: false, category: 'cat-1' },
-                            { id: 't5', text: '睡前靜心冥想 10 分鐘', completed: true, category: 'cat-4' }
-                        ],
-                        habits: { 'h-1': true, 'h-2': false, 'h-3': true },
-                        mood: '😌',
-                        note: '今天嘗試了新的放鬆冥想，心情特別平靜。'
-                    }
-                };
-            });
-
             const [habits, setHabits] = useState(() => {
                 const saved = localStorage.getItem('lw_habits');
-                return saved ? JSON.parse(saved) : [
-                    { id: 'h-1', name: '每日創作/靈感記錄', icon: 'fa-pen-fancy' },
-                    { id: 'h-2', name: '飲水 2000cc', icon: 'fa-droplet' },
-                    { id: 'h-3', name: '閱讀 15 分鐘', icon: 'fa-book' }
-                ];
+                return saved ? JSON.parse(saved) : INITIAL_HABITS;
+            });
+
+            const [journalData, setJournalData] = useState(() => {
+                const saved = localStorage.getItem('lw_journal_data');
+                return saved ? JSON.parse(saved) : INITIAL_MOCK_DATA;
             });
 
             const [fbConfig, setFbConfig] = useState(() => {
                 const saved = localStorage.getItem('lw_fb_config');
-                return saved ? JSON.parse(saved) : { apiKey: '', projectId: '', appId: '', autoSync: false };
+                return saved ? JSON.parse(saved) : { apiKey: '', projectId: '', appId: '' };
             });
 
             const [syncStatus, setSyncStatus] = useState('');
 
-            useEffect(() => {
-                localStorage.setItem('lw_categories', JSON.stringify(categories));
-            }, [categories]);
+            useEffect(() => { localStorage.setItem('lw_categories', JSON.stringify(categories)); }, [categories]);
+            useEffect(() => { localStorage.setItem('lw_journal_data', JSON.stringify(journalData)); }, [journalData]);
+            useEffect(() => { localStorage.setItem('lw_habits', JSON.stringify(habits)); }, [habits]);
+            useEffect(() => { localStorage.setItem('lw_fb_config', JSON.stringify(fbConfig)); }, [fbConfig]);
 
-            useEffect(() => {
-                localStorage.setItem('lw_journal_data', JSON.stringify(journalData));
-                if (fbConfig.autoSync) handleCloudUpload();
-            }, [journalData]);
-
-            useEffect(() => {
-                localStorage.setItem('lw_habits', JSON.stringify(habits));
-            }, [habits]);
-
-            useEffect(() => {
-                localStorage.setItem('lw_fb_config', JSON.stringify(fbConfig));
-            }, [fbConfig]);
-
-            useEffect(() => {
-                const randIndex = Math.floor(Math.random() * QUOTES.length);
-                setQuote(QUOTES[randIndex]);
-            }, [selectedDate]);
-
+            // 【完全復原：動態推算整週日曆】
             const weekDays = useMemo(() => {
                 const days = [];
-                const current = new Date('2026-06-01'); 
+                const start = new Date(currentWeekStart);
+                const dayLabels = ['日', '一', '二', '三', '四', '五', '六'];
                 for (let i = 0; i < 7; i++) {
-                    const dateStr = current.toISOString().split('T')[0];
-                    const dayLabels = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+                    const dateStr = start.toISOString().split('T')[0];
                     days.push({
                         date: dateStr,
-                        dayName: dayLabels[current.getDay()],
-                        dayNum: current.getDate()
+                        dayName: '週' + dayLabels[start.getDay()],
+                        shortName: dayLabels[start.getDay()],
+                        dayNum: start.getDate(),
+                        monthNum: start.getMonth() + 1
                     });
-                    current.setDate(current.getDate() + 1);
+                    start.setDate(start.getDate() + 1);
                 }
                 return days;
-            }, []);
+            }, [currentWeekStart]);
+
+            // 切換前一週 / 後一週
+            const handlePrevWeek = () => {
+                const newStart = new Date(currentWeekStart);
+                newStart.setDate(newStart.getDate() - 7);
+                setCurrentWeekStart(newStart);
+                setSelectedDate(newStart.toISOString().split('T')[0]);
+            };
+
+            const handleNextWeek = () => {
+                const newStart = new Date(currentWeekStart);
+                newStart.setDate(newStart.getDate() + 7);
+                setCurrentWeekStart(newStart);
+                setSelectedDate(newStart.toISOString().split('T')[0]);
+            };
 
             const currentDayData = journalData[selectedDate] || { todos: [], habits: {}, mood: '⚪', note: '' };
 
-            const addTodo = (text, categoryId) => {
-                if (!text.trim()) return;
-                const newTodo = { id: 'todo-' + Date.now(), text, completed: false, category: categoryId };
-                setJournalData(prev => ({
-                    ...prev,
-                    [selectedDate]: {
-                        ...currentDayData,
-                        todos: [...currentDayData.todos, newTodo]
-                    }
-                }));
-            };
+            const habitGridData = useMemo(() => {
+                return habits.map(h => {
+                    const weeklyRecords = weekDays.map(day => !!journalData[day.date]?.habits?.[h.id]);
+                    return { ...h, weeklyRecords, doneCount: weeklyRecords.filter(Boolean).length };
+                });
+            }, [habits, weekDays, journalData]);
 
-            const toggleTodo = (todoId) => {
-                const updatedTodos = currentDayData.todos.map(t => t.id === todoId ? { ...t, completed: !t.completed } : t);
-                setJournalData(prev => ({
-                    ...prev,
-                    [selectedDate]: { ...currentDayData, todos: updatedTodos }
-                }));
-            };
-
-            const deleteTodo = (todoId) => {
-                const updatedTodos = currentDayData.todos.filter(t => t.id !== todoId);
-                setJournalData(prev => ({
-                    ...prev,
-                    [selectedDate]: { ...currentDayData, todos: updatedTodos }
-                }));
-            };
-
-            const toggleHabit = (habitId) => {
-                const currentHabits = { ...currentDayData.habits };
-                currentHabits[habitId] = !currentHabits[habitId];
-                setJournalData(prev => ({
-                    ...prev,
-                    [selectedDate]: { ...currentDayData, habits: currentHabits }
-                }));
-            };
-
-            const updateMood = (mood) => {
-                setJournalData(prev => ({
-                    ...prev,
-                    [selectedDate]: { ...currentDayData, mood }
-                }));
-            };
-
-            const updateNote = (note) => {
-                setJournalData(prev => ({
-                    ...prev,
-                    [selectedDate]: { ...currentDayData, note }
-                }));
-            };
-
+            // 【完全復原：支援「週 ⇄ 月」大尺度的統計分析引擎】
             const statsMetrics = useMemo(() => {
+                // 如果切換成月觀察，自動抓取當前週所屬月份（例如 2025-06）的所有天數
+                const currentMonthStr = weekDays[0].date.substring(0, 7); 
                 const targetDates = statsPeriod === 'week' 
                     ? weekDays.map(d => d.date)
-                    : Object.keys(journalData).filter(d => d.startsWith('2026-06'));
+                    : Object.keys(journalData).filter(d => d.startsWith(currentMonthStr));
 
                 let totalTodos = 0, completedTodos = 0;
                 let habitCheckCount = 0, habitTotalPossible = targetDates.length * habits.length;
-                const moodCounts = {};
+                
                 const catCounts = {};
+                const moodCounts = {};
+                let dominantMood = '😊';
+                let maxMoodCount = 0;
 
                 targetDates.forEach(date => {
                     const data = journalData[date];
@@ -215,115 +221,98 @@
                         }
                         if (data.mood && data.mood !== '⚪') {
                             moodCounts[data.mood] = (moodCounts[data.mood] || 0) + 1;
+                            if (moodCounts[data.mood] > maxMoodCount) {
+                                maxMoodCount = moodCounts[data.mood];
+                                dominantMood = data.mood;
+                            }
                         }
                     }
+                });
+
+                let currentOffset = 0;
+                const totalCompleted = completedTodos || 1;
+                const pieSlices = categories.map(cat => {
+                    const count = catCounts[cat.id] || 0;
+                    const percentage = Math.round((count / totalCompleted) * 100);
+                    const strokeLength = (count / totalCompleted) * 100;
+                    const offset = currentOffset;
+                    currentOffset += strokeLength;
+                    return { ...cat, count, percentage, strokeLength, offset };
                 });
 
                 return {
                     todoRate: totalTodos ? Math.round((completedTodos / totalTodos) * 100) : 0,
                     habitRate: habitTotalPossible ? Math.round((habitCheckCount / habitTotalPossible) * 100) : 0,
-                    moodCounts,
-                    catCounts,
-                    targetDates
+                    completedTodos, dominantMood, dominantMoodCount: maxMoodCount || 1, pieSlices, targetDates
                 };
-            }, [journalData, statsPeriod, weekDays, habits]);
+            }, [journalData, statsPeriod, weekDays, habits, categories]);
 
-            // 修正後的 Firebase ESM 引擎，移除所有 require 依賴
-            const getFirestoreEngine = async () => {
-                if (!fbConfig.apiKey || !fbConfig.projectId || !fbConfig.appId) {
-                    throw new Error('請先在設定中填入完整的 Firebase 憑證欄位。');
-                }
-                
-                // 動態載入符合瀏覽器環境的原生 ESM 模組
-                const { initializeApp, getApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
-                const { getFirestore, doc, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
-                
-                const firebaseConfigData = {
-                    apiKey: fbConfig.apiKey,
-                    authDomain: `${fbConfig.projectId}.firebaseapp.com`,
-                    projectId: fbConfig.projectId,
-                    storageBucket: `${fbConfig.projectId}.firebasestorage.app`,
-                    appId: fbConfig.appId
-                };
-
-                const app = getApps().length === 0 ? initializeApp(firebaseConfigData) : getApp();
-                const db = getFirestore(app);
-                
-                return { db, doc, setDoc, getDoc };
+            const addTodo = (text, categoryId) => {
+                if (!text.trim()) return;
+                const newTodo = { id: 'todo-' + Date.now(), text, completed: false, category: categoryId };
+                setJournalData(prev => ({
+                    ...prev,
+                    [selectedDate]: { ...currentDayData, todos: [...(currentDayData.todos || []), newTodo] }
+                }));
             };
 
-            const handleCloudUpload = async () => {
-                try {
-                    setSyncStatus('正在同步備份至雲端...');
-                    const { db, doc, setDoc } = await getFirestoreEngine();
-                    await setDoc(doc(db, 'users', 'main_profile'), {
-                        journalData, habits, categories, updatedAt: Date.now()
-                    }, { merge: true });
-                    setSyncStatus('✨ 雲端同步上傳成功！資料已安全備份。');
-                } catch (err) {
-                    setSyncStatus('同步失敗: ' + err.message);
-                }
+            const toggleTodo = (todoId) => {
+                const updatedTodos = (currentDayData.todos || []).map(t => t.id === todoId ? { ...t, completed: !t.completed } : t);
+                setJournalData(prev => ({ ...prev, [selectedDate]: { ...currentDayData, todos: updatedTodos } }));
             };
 
-            const handleCloudDownload = async () => {
-                try {
-                    setSyncStatus('正在從雲端抓取最新數據...');
-                    const { db, doc, getDoc } = await getFirestoreEngine();
-                    const snap = await getDoc(doc(db, 'users', 'main_profile'));
-                    if (snap.exists()) {
-                        const cloud = snap.data();
-                        if (cloud.journalData) setJournalData(cloud.journalData);
-                        if (cloud.habits) setHabits(cloud.habits);
-                        if (cloud.categories) setCategories(cloud.categories);
-                        setSyncStatus('✨ 雲端資料同步下載覆蓋完成！');
-                    } else {
-                        setSyncStatus('雲端目前尚未有備份紀錄。');
-                    }
-                } catch (err) {
-                    setSyncStatus('下載失敗: ' + err.message);
-                }
+            const deleteTodo = (todoId) => {
+                const updatedTodos = (currentDayData.todos || []).filter(t => t.id !== todoId);
+                setJournalData(prev => ({ ...prev, [selectedDate]: { ...currentDayData, todos: updatedTodos } }));
+            };
+
+            const updateMood = (mood) => {
+                setJournalData(prev => ({ ...prev, [selectedDate]: { ...currentDayData, mood } }));
+            };
+
+            const updateNote = (note) => {
+                setJournalData(prev => ({ ...prev, [selectedDate]: { ...currentDayData, note } }));
             };
 
             return (
-                <div className="min-h-screen flex flex-col pb-12">
-                    <header className="bg-white border-b border-stone-200/80 sticky top-0 z-30 shadow-sm backdrop-blur-md bg-white/90">
+                <div className="min-h-screen flex flex-col pb-16">
+                    <header className="bg-white border-b border-stone-200/60 sticky top-0 z-40 backdrop-blur-md shadow-sm">
                         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
                             <div className="flex items-center space-x-3">
-                                <div className="forest-bg text-white p-2.5 rounded-xl shadow-md shadow-emerald-900/10">
-                                    <i className="fa-solid fa-feather-pointed text-xl"></i>
-                                </div>
+                                <div className="forest-bg text-white p-2.5 rounded-xl shadow-md"><i className="fa-solid fa-palette text-xl"></i></div>
                                 <div>
-                                    <h1 className="text-xl font-bold tracking-wide forest-green">生活漫步</h1>
-                                    <p className="text-xs text-stone-400">Life Walk • 專屬私生活美學儀式</p>
+                                    <h1 className="text-xl font-bold tracking-wide forest-green">生活漫步 <span className="text-xs font-normal text-stone-400 ml-1">Life Walk</span></h1>
+                                    <p className="text-xs text-stone-400">每日日誌與自我提案 • 拾起生活的儀式感</p>
                                 </div>
                             </div>
-                            <nav className="flex space-x-2 bg-stone-100 p-1 rounded-xl">
-                                <button onClick={() => setActiveTab('journal')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'journal' ? 'bg-white forest-green shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>
-                                    <i className="fa-solid fa-calendar-week mr-2"></i>周誌計畫
-                                </button>
-                                <button onClick={() => setActiveTab('stats')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'stats' ? 'bg-white forest-green shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>
-                                    <i className="fa-solid fa-chart-pie mr-2"></i>生活觀察
-                                </button>
-                                <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'settings' ? 'bg-white forest-green shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>
-                                    <i className="fa-solid fa-sliders mr-2"></i>系統與類別
-                                </button>
+                            <nav className="flex space-x-1.5 bg-stone-100 p-1 rounded-xl">
+                                <button onClick={() => setActiveTab('journal')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'journal' ? 'bg-white forest-green shadow-sm font-semibold' : 'text-stone-500 hover:text-stone-800'}`}><i className="fa-solid fa-calendar-week mr-1.5"></i>周誌計畫</button>
+                                <button onClick={() => setActiveTab('habits')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'habits' ? 'bg-white forest-green shadow-sm font-semibold' : 'text-stone-500 hover:text-stone-800'}`}><i className="fa-solid fa-circle-check mr-1.5"></i>習慣挑戰</button>
+                                <button onClick={() => setActiveTab('stats')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'stats' ? 'bg-white forest-green shadow-sm font-semibold' : 'text-stone-500 hover:text-stone-800'}`}><i className="fa-solid fa-chart-line mr-1.5"></i>生活觀察</button>
+                                <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'settings' ? 'bg-white forest-green shadow-sm font-semibold' : 'text-stone-500 hover:text-stone-800'}`}><i className="fa-solid fa-sliders mr-1.5"></i>系統與類別</button>
                             </nav>
                         </div>
                     </header>
 
-                    <main className="max-w-6xl mx-auto px-6 mt-8 flex-1 w-full">
-                        {syncStatus && (
-                            <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-xl flex items-center justify-between shadow-sm animate-fade-in">
-                                <span><i className="fa-solid fa-circle-info mr-2"></i>{syncStatus}</span>
-                                <button onClick={() => setSyncStatus('')} className="text-emerald-400 hover:text-emerald-600"><i className="fa-solid fa-xmark"></i></button>
-                            </div>
-                        )}
-
+                    <main className="max-w-6xl mx-auto px-6 mt-6 flex-1 w-full">
+                        {/* 周誌計畫分頁 */}
                         {activeTab === 'journal' && (
                             <div className="space-y-6">
+                                {/* 【點擊修復】週別雙向箭頭滾動面板 */}
+                                <div className="bg-white rounded-2xl p-4 border border-stone-200/60 custom-shadow flex items-center justify-between">
+                                    <button onClick={handlePrevWeek} className="p-2 hover:bg-stone-50 rounded-xl border border-stone-200/40 text-stone-400 hover:text-stone-700 transition-all"><i className="fa-solid fa-chevron-left"></i></button>
+                                    <div className="text-center select-none">
+                                        <h2 className="text-base font-bold text-stone-800">{weekDays[0]?.monthNum}月 生活漫步</h2>
+                                        <p className="text-[11px] text-stone-400">{weekDays[0]?.date.substring(5)} ~ {weekDays[6]?.date.substring(5)}</p>
+                                    </div>
+                                    <button onClick={handleNextWeek} className="p-2 hover:bg-stone-50 rounded-xl border border-stone-200/40 text-stone-400 hover:text-stone-700 transition-all"><i className="fa-solid fa-chevron-right"></i></button>
+                                </div>
+
+                                <p className="text-xs font-semibold text-stone-500 flex items-center"><span className="w-1.5 h-3 forest-bg rounded-full mr-2"></span>本周漫步軌跡（點選一天進入深度書寫）</p>
+
                                 <div className="grid grid-cols-7 gap-3">
                                     {weekDays.map(day => {
-                                        const dayData = journalData[day.date] || { todos: [], habits: {} };
+                                        const dayData = journalData[day.date] || { todos: [] };
                                         const isSelected = selectedDate === day.date;
                                         const doneTodos = dayData.todos?.filter(t => t.completed).length || 0;
                                         const totalTodos = dayData.todos?.length || 0;
@@ -331,18 +320,22 @@
 
                                         return (
                                             <div key={day.date} onClick={() => setSelectedDate(day.date)} 
-                                                 className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 text-center relative flex flex-col justify-between h-32 select-none group ${isSelected ? 'bg-white border-emerald-600 shadow-lg scale-105 ring-2 ring-emerald-600/10' : 'bg-white border-stone-200/60 hover:border-stone-400 hover:shadow-md'}`}>
-                                                <div>
-                                                    <span className={`text-xs block font-medium ${isSelected ? 'forest-green font-bold' : 'text-stone-400 group-hover:text-stone-600'}`}>{day.dayName}</span>
-                                                    <span className="text-2xl font-bold tracking-tight block mt-1">{day.dayNum}</span>
+                                                 className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between h-36 ${isSelected ? 'bg-white border-emerald-600 custom-shadow ring-2 ring-emerald-600/10 scale-[1.02]' : 'bg-white border-stone-200/50 hover:shadow-sm'}`}>
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <span className="text-[11px] block font-medium text-stone-400">{day.dayName}</span>
+                                                        <span className="text-2xl font-bold mt-0.5 block">{day.dayNum}</span>
+                                                    </div>
+                                                    <span className="text-xl filter drop-shadow-sm">{dayData.mood || '⚪'}</span>
                                                 </div>
-                                                <div className="flex flex-col items-center justify-center mt-2">
-                                                    <span className="text-xl block filter drop-shadow-sm">{dayData.mood || '⚪'}</span>
-                                                    {totalTodos > 0 && (
-                                                        <div className="w-full bg-stone-100 h-1 rounded-full mt-2 overflow-hidden">
-                                                            <div className="forest-bg h-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                                                        </div>
-                                                    )}
+                                                <div>
+                                                    <div className="flex justify-between text-[10px] text-stone-400 mb-1 font-medium">
+                                                        <span>提案: {doneTodos}/{totalTodos}</span>
+                                                        <span className="forest-green font-bold">{progress}%</span>
+                                                    </div>
+                                                    <div className="w-full bg-stone-100 h-1 rounded-full overflow-hidden">
+                                                        <div className="forest-bg h-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
@@ -350,213 +343,247 @@
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <div className="lg:col-span-2 space-y-6">
-                                        <div className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-6">
-                                            <div className="flex justify-between items-center border-b border-stone-100 pb-4">
-                                                <div>
-                                                    <h3 className="text-lg font-bold forest-green flex items-center">
-                                                        <i className="fa-solid fa-clipboard-list mr-2 text-emerald-600"></i>今日生活提案 (To-Do)
-                                                    </h3>
-                                                    <p className="text-xs text-stone-400 mt-0.5">為生活預留放鬆與實踐的步伐</p>
-                                                </div>
-                                                {currentDayData.todos.length > 0 && (
-                                                    <span className="text-xs font-semibold px-2.5 py-1 bg-stone-100 rounded-full text-stone-600">
-                                                        已完成 {currentDayData.todos.filter(t => t.completed).length} / {currentDayData.todos.length}
-                                                    </span>
-                                                )}
+                                    <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-stone-200/60 custom-shadow space-y-5">
+                                        <div className="flex justify-between items-center border-b border-stone-100 pb-3">
+                                            <h3 className="text-sm font-bold text-stone-800 flex items-center"><i className="fa-solid fa-clipboard-list mr-2 text-emerald-600"></i>今日生活提案 / 行動靈感</h3>
+                                            <div className="w-20 bg-stone-100 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-stone-600">
+                                                {currentDayData.todos?.length ? Math.round((currentDayData.todos.filter(t => t.completed).length / currentDayData.todos.length) * 100) : 0}%達成
                                             </div>
+                                        </div>
 
-                                            <form onSubmit={(e) => {
-                                                e.preventDefault();
-                                                const txt = e.target.elements.todoText.value;
-                                                const cat = e.target.elements.todoCat.value;
-                                                addTodo(txt, cat);
-                                                e.target.reset();
-                                            }} className="flex items-center gap-2 bg-stone-50 p-2 rounded-2xl border border-stone-200/50">
-                                                <select name="todoCat" className="bg-white text-xs font-medium border border-stone-200 rounded-xl px-3 py-2 text-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-600/20">
-                                                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                                </select>
-                                                <input type="text" name="todoText" placeholder="想安排什麼美妙的事項呢..." className="bg-transparent flex-1 text-sm text-stone-800 placeholder-stone-400 px-2 focus:outline-none" />
-                                                <button type="submit" className="forest-bg text-white text-xs px-4 py-2 rounded-xl font-medium shadow-sm hover:opacity-90 transition-all">
-                                                    <i className="fa-solid fa-plus mr-1"></i>提案
-                                                </button>
-                                            </form>
+                                        <form onSubmit={(e) => {
+                                            e.preventDefault();
+                                            addTodo(e.target.todoText.value, e.target.todoCat.value);
+                                            e.target.reset();
+                                        }} className="flex gap-2 bg-stone-50 p-1.5 rounded-xl border border-stone-200/40">
+                                            <select name="todoCat" className="bg-white text-xs font-medium rounded-lg px-2 py-1.5 focus:outline-none">
+                                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                            <input type="text" name="todoText" placeholder="新增行動提案..." className="bg-transparent flex-1 text-xs px-2 focus:outline-none" />
+                                            <button type="submit" className="forest-bg text-white text-xs px-3 py-1.5 rounded-lg font-medium"><i className="fa-solid fa-plus"></i></button>
+                                        </form>
 
-                                            <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
-                                                {currentDayData.todos.length === 0 ? (
-                                                    <div className="text-center py-12 text-stone-400 text-sm">
-                                                        <i className="fa-regular fa-calendar-minus block text-3xl mb-2 text-stone-300"></i>
-                                                        今天暫時沒有安排計畫，放鬆也是種好提案。
-                                                    </div>
-                                                ) : (
-                                                    currentDayData.todos.map(todo => {
-                                                        const cat = categories.find(c => c.id === todo.category) || {};
-                                                        return (
-                                                            <div key={todo.id} className="flex items-center justify-between p-3.5 bg-stone-50/50 hover:bg-stone-50 rounded-xl border border-stone-100 transition-all group">
-                                                                <div className="flex items-center space-x-3 flex-1 cursor-pointer select-none" onClick={() => toggleTodo(todo.id)}>
-                                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${todo.completed ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-stone-300 bg-white'}`}>
-                                                                        {todo.completed && <i className="fa-solid fa-check text-xs"></i>}
-                                                                    </div>
-                                                                    <span className={`text-sm text-stone-700 ${todo.completed ? 'line-through text-stone-400' : ''}`}>{todo.text}</span>
+                                        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                                            {(!currentDayData.todos || currentDayData.todos.length === 0) ? (
+                                                <div className="text-center py-12 text-stone-400 text-xs">今天暫時沒有安排計畫。</div>
+                                            ) : (
+                                                currentDayData.todos.map(t => {
+                                                    const cat = categories.find(c => c.id === t.category) || {};
+                                                    return (
+                                                        <div key={t.id} className="flex items-center justify-between p-3 bg-stone-50/40 rounded-xl border border-stone-100 hover:bg-stone-50 transition-all">
+                                                            <div className="flex items-center space-x-3 cursor-pointer select-none" onClick={() => toggleTodo(t.id)}>
+                                                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${t.completed ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-stone-300 bg-white'}`}>
+                                                                    {t.completed && <i className="fa-solid fa-check text-[10px]"></i>}
                                                                 </div>
-                                                                <div className="flex items-center space-x-2">
-                                                                    <span className="text-xs px-2.5 py-1 rounded-full text-white font-medium shadow-sm" style={{ backgroundColor: cat.color || '#999' }}>
-                                                                        <i className={`fa-solid ${cat.icon || 'fa-tag'} mr-1`}></i>{cat.name}
-                                                                    </span>
-                                                                    <button onClick={() => deleteTodo(todo.id)} className="text-stone-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all p-1">
-                                                                        <i className="fa-solid fa-trash-can text-xs"></i>
-                                                                    </button>
-                                                                </div>
+                                                                <span className={`text-xs ${t.completed ? 'line-through text-stone-400' : 'text-stone-700'}`}>{t.text}</span>
                                                             </div>
-                                                        );
-                                                    })
-                                                )}
-                                            </div>
+                                                            <span className="text-[10px] px-2.5 py-0.5 rounded-full text-white font-medium" style={{ backgroundColor: cat.color }}>{cat.name}</span>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
                                         </div>
                                     </div>
 
                                     <div className="space-y-6">
-                                        <div className="bg-white rounded-3xl p-5 border border-stone-200/60 shadow-sm">
-                                            <h4 className="text-sm font-bold text-stone-500 mb-3"><i className="fa-regular fa-face-smile mr-1.5"></i>今日心情調色盤</h4>
-                                            <div className="flex justify-between p-1 bg-stone-50 rounded-xl border border-stone-200/30">
-                                                {['🌟', '😊', '😌', '☕', '🍂', '⏳'].map(m => (
-                                                    <button key={m} onClick={() => updateMood(m)} className={`text-xl p-2 rounded-lg transition-all ${currentDayData.mood === m ? 'bg-white shadow-md scale-110' : 'hover:scale-105 opacity-60 hover:opacity-100'}`}>
-                                                        {m}
-                                                    </button>
+                                        <div className="bg-white rounded-2xl p-5 border border-stone-200/60 custom-shadow">
+                                            <h4 className="text-xs font-bold text-stone-400 mb-3"><i className="fa-regular fa-face-smile mr-1.5"></i>今日心情基調</h4>
+                                            <div className="flex justify-between p-1 bg-stone-50 rounded-xl">
+                                                {['🥰', '😊', '😌', '🌱', '☀️', '☕', '📝'].map(m => (
+                                                    <button key={m} onClick={() => updateMood(m)} className={`text-lg p-1.5 rounded-lg transition-all ${currentDayData.mood === m ? 'bg-white shadow scale-110' : 'opacity-40 hover:opacity-100'}`}>{m}</button>
                                                 ))}
                                             </div>
                                         </div>
 
-                                        <div className="bg-white rounded-3xl p-5 border border-stone-200/60 shadow-sm">
-                                            <h4 className="text-sm font-bold text-stone-500 mb-3.5"><i className="fa-solid fa-wand-magic-sparkles mr-1.5"></i>今日習慣實踐打卡</h4>
-                                            <div className="space-y-2">
-                                                {habits.map(h => {
-                                                    const isChecked = !!currentDayData.habits?.[h.id];
+                                        <div className="bg-white rounded-2xl p-5 border border-stone-200/60 custom-shadow">
+                                            <h4 className="text-xs font-bold text-stone-400 mb-3"><i className="fa-solid fa-signature mr-1.5"></i>今日靈感隨筆</h4>
+                                            <textarea value={currentDayData.note || ''} onChange={(e) => updateNote(e.target.value)} placeholder="記錄今天值得留念的放鬆片刻..." className="w-full h-28 p-3 text-xs rounded-xl border border-stone-200/40 focus:outline-none linen-bg text-stone-700 resize-none leading-relaxed"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 分頁二：習慣挑戰 */}
+                        {activeTab === 'habits' && (
+                            <div className="bg-white rounded-2xl p-6 border border-stone-200/60 custom-shadow space-y-6">
+                                <div className="border-b border-stone-100 pb-4">
+                                    <h3 className="text-base font-bold forest-green"><i className="fa-solid fa-circle-check mr-2 text-emerald-600"></i>本周核心習慣實踐挑戰矩陣</h3>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-stone-100 text-stone-400 text-xs">
+                                                <th className="py-3 font-semibold">核心習慣項目</th>
+                                                {weekDays.map(d => (
+                                                    <th key={d.date} className="py-3 font-semibold text-center text-[11px]">{d.dayName}<br/><span className="text-stone-300 font-normal">{d.dayNum}日</span></th>
+                                                ))}
+                                                <th className="py-3 font-semibold text-center">每週達成</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {habitGridData.map(h => (
+                                                <tr key={h.id} className="border-b border-stone-50 hover:bg-stone-50/40 transition-all">
+                                                    <td className="py-4 flex items-center space-x-2.5">
+                                                        <div className="w-7 h-7 rounded-lg bg-stone-50 border border-stone-100 flex items-center justify-center text-stone-500 text-xs"><i className={`fa-solid ${h.icon}`}></i></div>
+                                                        <span className="text-xs font-medium text-stone-700">{h.name}</span>
+                                                    </td>
+                                                    {weekDays.map((d, index) => {
+                                                        const isChecked = h.weeklyRecords[index];
+                                                        return (
+                                                            <td key={d.date} className="py-4 text-center">
+                                                                <button onClick={() => {
+                                                                    const dayH = { ...(journalData[d.date]?.habits || {}) };
+                                                                    dayH[h.id] = !dayH[h.id];
+                                                                    setJournalData(prev => ({ ...prev, [d.date]: { ...(journalData[d.date] || {}), habits: dayH } }));
+                                                                }} className={`w-6 h-6 rounded-full mx-auto flex items-center justify-center border transition-all ${isChecked ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'border-stone-200 bg-white text-transparent'}`}>
+                                                                    <i className="fa-solid fa-check text-[10px]"></i>
+                                                                </button>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                    <td className="py-4 text-center">
+                                                        <span className="text-xs font-bold px-2.5 py-1 bg-stone-100 rounded-full text-stone-600">{h.doneCount} / 7 天</span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 分頁三：生活觀察 */}
+                        {activeTab === 'stats' && (
+                            <div className="space-y-6">
+                                <div className="bg-white rounded-2xl p-6 border border-stone-200/60 custom-shadow flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                                    <div>
+                                        <h3 className="text-base font-bold text-stone-800 flex items-center"><i className="fa-solid fa-chart-pie mr-2 text-emerald-600"></i>本周生活提案觀察</h3>
+                                        <p className="text-xs text-stone-400 mt-0.5">觀察這段時間的生活重心，適時調研生活步調</p>
+                                    </div>
+                                    <div className="flex bg-stone-100 p-1 rounded-xl text-xs border border-stone-200/30">
+                                        <button onClick={() => setStatsPeriod('week')} className={`px-4 py-1.5 font-medium rounded-lg transition-all ${statsPeriod === 'week' ? 'bg-white font-bold forest-green shadow-sm' : 'text-stone-400'}`}>本周觀察</button>
+                                        <button onClick={() => setStatsPeriod('month')} className={`px-4 py-1.5 font-medium rounded-lg transition-all ${statsPeriod === 'month' ? 'bg-white font-bold forest-green shadow-sm' : 'text-stone-400'}`}>本月觀察</button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                    <div className="bg-white p-5 rounded-2xl border border-stone-200/60 custom-shadow flex items-center space-x-4">
+                                        <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-lg"><i className="fa-solid fa-award"></i></div>
+                                        <div>
+                                            <span className="text-xs text-stone-400 font-medium block">階段計畫完成率</span>
+                                            <span className="text-2xl font-bold tracking-tight text-stone-800">{statsMetrics.todoRate}%</span>
+                                            <span className="text-[10px] text-stone-400 block mt-0.5">累計已實踐 {statsMetrics.completedTodos} 個提案</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-5 rounded-2xl border border-stone-200/60 custom-shadow flex items-center space-x-4">
+                                        <div className="p-3 bg-amber-50 text-amber-600 rounded-xl text-lg"><i className="fa-solid fa-book-bookmark"></i></div>
+                                        <div>
+                                            <span className="text-xs text-stone-400 font-medium block">習慣落實指數</span>
+                                            <span className="text-2xl font-bold tracking-tight text-stone-800">{statsMetrics.habitRate}%</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-5 rounded-2xl border border-stone-200/60 custom-shadow flex items-center space-x-4">
+                                        <div className="p-3 bg-pink-50 text-pink-500 rounded-xl text-lg"><i className="fa-regular fa-face-heart"></i></div>
+                                        <div>
+                                            <span className="text-xs text-stone-400 font-medium block">主導心情狀態</span>
+                                            <div className="flex items-center space-x-1.5 mt-0.5">
+                                                <span className="text-2xl filter drop-shadow-sm">{statsMetrics.dominantMood}</span>
+                                                <span className="text-base font-bold text-stone-700">({statsMetrics.dominantMoodCount} 天)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <div className="bg-white rounded-2xl p-6 border border-stone-200/60 custom-shadow space-y-4">
+                                        <h4 className="text-sm font-bold text-stone-700 flex items-center"><span className="w-1.5 h-3 bg-pink-500 rounded-full mr-2"></span>當期心情溫度計</h4>
+                                        <div className="w-full pt-4">
+                                            <svg viewBox="0 0 700 140" className="w-full h-36 overflow-visible">
+                                                <line x1="0" y1="20" x2="700" y2="20" stroke="#f1f2f0" strokeWidth="1" />
+                                                <line x1="0" y1="45" x2="700" y2="45" stroke="#f1f2f0" strokeWidth="1" />
+                                                <line x1="0" y1="65" x2="700" y2="65" stroke="#f1f2f0" strokeWidth="1" />
+                                                <line x1="0" y1="95" x2="700" y2="95" stroke="#f1f2f0" strokeWidth="1" />
+                                                
+                                                <path d={weekDays.map((d, i) => `${i===0?'M':'L'} ${50+i*100} ${MOOD_Y_MAP[journalData[d.date]?.mood || '⚪']}`).join(' ')} 
+                                                      fill="none" stroke="#f43f5e" strokeWidth="2.5" strokeLinecap="round" opacity="0.6" />
+                                                
+                                                {weekDays.map((d, idx) => {
+                                                    const mood = journalData[d.date]?.mood || '⚪';
+                                                    const cx = 50 + idx * 100;
+                                                    const cy = MOOD_Y_MAP[mood];
                                                     return (
-                                                        <div key={h.id} onClick={() => toggleHabit(h.id)} 
-                                                             className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer select-none transition-all ${isChecked ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900' : 'bg-stone-50/30 border-stone-100 hover:border-stone-200 text-stone-600'}`}>
-                                                            <span className="text-sm font-medium"><i className={`fa-solid ${h.icon} mr-2 text-stone-400`}></i>{h.name}</span>
-                                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all ${isChecked ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'border-stone-300 bg-white'}`}>
-                                                                {isChecked && <i className="fa-solid fa-check text-xs"></i>}
-                                                            </div>
-                                                        </div>
+                                                        <g key={d.date}>
+                                                            <circle cx={cx} cy={cy} r="4" fill="#f43f5e" />
+                                                            <text x={cx} y={cy - 12} textAnchor="middle" className="text-base select-none">{mood}</text>
+                                                            <text x={cx} y="130" textAnchor="middle" className="text-[11px] fill-stone-400 font-medium">{d.shortName}</text>
+                                                        </g>
                                                     );
                                                 })}
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white rounded-2xl p-6 border border-stone-200/60 custom-shadow space-y-4">
+                                        <h4 className="text-sm font-bold text-stone-700 flex items-center"><span className="w-1.5 h-3 bg-emerald-500 rounded-full mr-2"></span>生活向度重心 (已達成計畫分布)</h4>
+                                        <div className="flex flex-col sm:flex-row items-center justify-around gap-4 pt-2">
+                                            <div className="relative w-36 h-36 flex items-center justify-center">
+                                                <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                                                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f1f2f0" strokeWidth="4" />
+                                                    {statsMetrics.pieSlices.map(slice => slice.strokeLength > 0 && (
+                                                        <circle key={slice.id} cx="18" cy="18" r="15.915" fill="none" stroke={slice.color} strokeWidth="4.2" strokeDasharray={`${slice.strokeLength} ${100 - slice.strokeLength}`} strokeDashoffset={100 - slice.offset} />
+                                                    ))}
+                                                </svg>
+                                                <div className="absolute text-center">
+                                                    <span className="text-2xl font-black text-stone-800 block">{statsMetrics.completedTodos}</span>
+                                                    <span className="text-[9px] font-bold text-stone-400 block -mt-0.5">實踐次數</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2 flex-1 max-w-[220px] w-full">
+                                                {statsMetrics.pieSlices.map(slice => (
+                                                    <div key={slice.id} className="flex items-center justify-between text-xs font-medium">
+                                                        <div className="flex items-center space-x-2">
+                                                            <span className="w-2.5 h-2.5 rounded-full block" style={{ backgroundColor: slice.color }}></span>
+                                                            <span className="text-stone-600">{slice.name}</span>
+                                                        </div>
+                                                        <div className="space-x-3 text-stone-400">
+                                                            <span>{slice.count} 次</span>
+                                                            <span className="font-semibold text-stone-500">({slice.percentage}%)</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
-
-                                        <div className="bg-white rounded-3xl p-5 border border-stone-200/60 shadow-sm flex flex-col">
-                                            <h4 className="text-sm font-bold text-stone-500 mb-2"><i className="fa-solid fa-signature mr-1.5"></i>生活留白手札</h4>
-                                            <div className="text-xs italic text-stone-400 border-l-2 border-amber-300/60 pl-2 mb-3 leading-relaxed">{quote}</div>
-                                            <textarea value={currentDayData.note || ''} onChange={(e) => updateNote(e.target.value)} placeholder="寫下今天的微光瞬間、創作靈感或是任何值得留念的放鬆片刻..."
-                                                      className="w-full flex-1 h-32 p-3 text-sm rounded-xl border border-stone-200/60 focus:outline-none focus:ring-2 focus:ring-emerald-600/10 linen-bg text-stone-700 leading-relaxed resize-none"></textarea>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {activeTab === 'stats' && (
-                            <div className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-8">
-                                <div className="flex justify-between items-center border-b border-stone-100 pb-5">
-                                    <div>
-                                        <h3 className="text-lg font-bold forest-green"><i className="fa-solid fa-chart-line mr-2 text-emerald-600"></i>生活向度觀察與能量統計</h3>
-                                        <p className="text-xs text-stone-400 mt-0.5">多維度審視個人生活的心靈收穫與實踐曲線</p>
-                                    </div>
-                                    <div className="flex bg-stone-100 p-1 rounded-xl border border-stone-200/30">
-                                        <button onClick={() => setStatsPeriod('week')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${statsPeriod === 'week' ? 'bg-white forest-green shadow-sm' : 'text-stone-400 hover:text-stone-700'}`}>本周觀察</button>
-                                        <button onClick={() => setStatsPeriod('month')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${statsPeriod === 'month' ? 'bg-white forest-green shadow-sm' : 'text-stone-400 hover:text-stone-700'}`}>本月觀察</button>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-stone-50/50 p-5 rounded-2xl border border-stone-100 text-center">
-                                        <span className="text-xs text-stone-400 font-medium block mb-1">生活提案實踐率</span>
-                                        <span className="text-4xl font-extrabold forest-green tracking-tight">{statsMetrics.todoRate}%</span>
-                                        <div className="w-full bg-stone-200 h-1.5 rounded-full mt-3 overflow-hidden max-w-[120px] mx-auto">
-                                            <div className="forest-bg h-full" style={{ width: `${statsMetrics.todoRate}%` }}></div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-stone-50/50 p-5 rounded-2xl border border-stone-100 text-center">
-                                        <span className="text-xs text-stone-400 font-medium block mb-1">核心習慣打卡率</span>
-                                        <span className="text-4xl font-extrabold text-amber-600 tracking-tight">{statsMetrics.habitRate}%</span>
-                                        <div className="w-full bg-stone-200 h-1.5 rounded-full mt-3 overflow-hidden max-w-[120px] mx-auto">
-                                            <div className="bg-amber-500 h-full" style={{ width: `${statsMetrics.habitRate}%` }}></div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-stone-50/50 p-5 rounded-2xl border border-stone-100 text-center">
-                                        <span className="text-xs text-stone-400 font-medium block mb-1">心情日誌覆蓋度</span>
-                                        <span className="text-4xl font-extrabold text-indigo-600 tracking-tight">
-                                            {statsMetrics.targetDates.filter(d => journalData[d]?.mood && journalData[d]?.mood !== '⚪').length} 天
-                                        </span>
-                                        <p className="text-[10px] text-stone-400 mt-2.5">在選定區間內被溫柔留念的日子</p>
-                                    </div>
-                                </div>
-
-                                <div className="border border-stone-100 rounded-2xl p-5">
-                                    <h4 className="text-sm font-bold text-stone-600 mb-4"><i className="fa-solid fa-heart-pulse mr-1.5 text-rose-500"></i>心情溫度起伏連續波形圖</h4>
-                                    <div className="w-full overflow-x-auto">
-                                        <svg viewBox="0 0 700 150" className="w-full h-36 overflow-visible">
-                                            <path d="M 50 120 Q 150 40 250 80 T 450 30 T 650 90" fill="none" stroke="#2c5e3b" strokeWidth="3" strokeLinecap="round" />
-                                            <circle cx="50" cy="120" r="5" fill="#ffffff" stroke="#2c5e3b" strokeWidth="2" />
-                                            <circle cx="250" cy="80" r="5" fill="#ffffff" stroke="#2c5e3b" strokeWidth="2" />
-                                            <circle cx="450" cy="30" r="5" fill="#ffffff" stroke="#2c5e3b" strokeWidth="2" />
-                                            <circle cx="650" cy="90" r="5" fill="#ffffff" stroke="#2c5e3b" strokeWidth="2" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
+                        {/* 系統設定分頁 */}
                         {activeTab === 'settings' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-5">
-                                    <div>
-                                        <h3 className="text-lg font-bold forest-green"><i className="fa-solid fa-cloud-arrow-up mr-2 text-emerald-600"></i>跨裝置雲端資料庫設定</h3>
-                                        <p className="text-xs text-stone-400 mt-0.5">填入您的私有 Firebase 憑證（安全儲存於您的本機）</p>
-                                    </div>
-                                    <div className="space-y-3.5">
+                                <div className="bg-white rounded-2xl p-6 border border-stone-200/60 custom-shadow space-y-5">
+                                    <h3 className="text-base font-bold forest-green"><i className="fa-solid fa-cloud mr-2 text-emerald-600"></i>跨裝置雲端資料庫設定</h3>
+                                    <div className="space-y-3">
                                         <div>
-                                            <label className="block text-xs font-semibold text-stone-500 mb-1">API Key (金鑰)</label>
-                                            <input type="password" value={fbConfig.apiKey} onChange={(e) => setFbConfig({...fbConfig, apiKey: e.target.value})} placeholder="AIzaSy..." className="w-full p-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600/10" />
+                                            <label className="block text-[11px] font-semibold text-stone-400 mb-1">API Key</label>
+                                            <input type="password" value={fbConfig.apiKey} onChange={(e) => setFbConfig({...fbConfig, apiKey: e.target.value})} placeholder="AIzaSy..." className="w-full p-2 text-xs border border-stone-200 rounded-lg focus:outline-none" />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-semibold text-stone-500 mb-1">Project ID (專案代碼)</label>
-                                            <input type="text" value={fbConfig.projectId} onChange={(e) => setFbConfig({...fbConfig, projectId: e.target.value})} placeholder="life-walk-xxxx" className="w-full p-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600/10" />
+                                            <label className="block text-[11px] font-semibold text-stone-400 mb-1">Project ID</label>
+                                            <input type="text" value={fbConfig.projectId} onChange={(e) => setFbConfig({...fbConfig, projectId: e.target.value})} placeholder="life-walk-xxxx" className="w-full p-2 text-xs border border-stone-200 rounded-lg focus:outline-none" />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-semibold text-stone-500 mb-1">App ID (應用程式 ID)</label>
-                                            <input type="text" value={fbConfig.appId} onChange={(e) => setFbConfig({...fbConfig, appId: e.target.value})} placeholder="1:xxxx:web:xxxx" className="w-full p-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600/10" />
+                                            <label className="block text-[11px] font-semibold text-stone-400 mb-1">App ID</label>
+                                            <input type="text" value={fbConfig.appId} onChange={(e) => setFbConfig({...fbConfig, appId: e.target.value})} placeholder="1:xxxx" className="w-full p-2 text-xs border border-stone-200 rounded-lg focus:outline-none" />
                                         </div>
-                                        <div className="flex items-center space-x-2 py-1">
-                                            <input type="checkbox" id="autoSync" checked={fbConfig.autoSync} onChange={(e) => setFbConfig({...fbConfig, autoSync: e.target.checked})} className="rounded text-emerald-600 focus:ring-emerald-600/20 w-4 h-4" />
-                                            <label htmlFor="autoSync" className="text-xs font-medium text-stone-600 select-none">啟用自動變更雙向同步 (Auto-Sync)</label>
+                                        <div className="grid grid-cols-2 gap-3 pt-3">
+                                            <button onClick={handleCloudUpload} className="forest-bg text-white text-xs py-2.5 rounded-xl font-medium shadow-sm"><i className="fa-solid fa-cloud-arrow-up mr-1"></i>上傳到雲端</button>
+                                            <button onClick={handleCloudDownload} className="bg-stone-100 text-stone-700 text-xs py-2.5 rounded-xl font-medium border border-stone-200/30"><i className="fa-solid fa-cloud-arrow-down mr-1"></i>自雲端下載</button>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-3 pt-2">
-                                            <button onClick={handleCloudUpload} className="forest-bg text-white text-xs py-3 rounded-xl font-medium shadow-sm hover:opacity-95 transition-all">
-                                                <i className="fa-solid fa-cloud-arrow-up mr-1.5"></i>備份資料到雲端
-                                            </button>
-                                            <button onClick={handleCloudDownload} className="bg-stone-100 text-stone-700 text-xs py-3 rounded-xl font-medium shadow-sm hover:bg-stone-200 transition-all border border-stone-200/40">
-                                                <i className="fa-solid fa-cloud-arrow-down mr-1.5"></i>從雲端同步回本機
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-6">
-                                    <div>
-                                        <h3 className="text-lg font-bold forest-green"><i className="fa-solid fa-tags mr-2 text-emerald-600"></i>生活類別維度定義</h3>
-                                        <p className="text-xs text-stone-400 mt-0.5">定義您在私領域中想悉心探索的活動維度</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {categories.map(cat => (
-                                            <div key={cat.id} className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-100">
-                                                <span className="text-sm font-medium text-stone-700 flex items-center">
-                                                    <span className="w-3 h-3 rounded-full mr-2.5 shadow-sm block" style={{ backgroundColor: cat.color }}></span>
-                                                    <i className={`fa-solid ${cat.icon} mr-2 text-stone-400 text-xs`}></i>{cat.name}
-                                                </span>
-                                            </div>
-                                        ))}
                                     </div>
                                 </div>
                             </div>
